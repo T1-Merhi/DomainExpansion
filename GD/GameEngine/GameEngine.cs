@@ -4,6 +4,8 @@
     public AssetManager Assets { get; private set; }
     public SceneManager Scenes { get; private set; }
 
+    private bool _shouldQuit;
+
     public GameEngine()
     {
         Settings = GameSettings.Load();
@@ -28,13 +30,14 @@
         Assets.LoadAll();
 
         // Initialize SceneManager and load the first scene
-        Scenes = new SceneManager(this);
-        Scenes.ChangeScene(new TestScene());
+        Scenes = new SceneManager(Assets, Settings);
+        Scenes.QuitRequested += () => _shouldQuit = true;
+        Scenes.ChangeScene(new MainMenuScene());
     }
 
     private void GameLoop()
     {
-        while (!Raylib.WindowShouldClose())
+        while (!Raylib.WindowShouldClose() && !_shouldQuit)
         {
             float deltaTime = Raylib.GetFrameTime();
             Update(deltaTime);

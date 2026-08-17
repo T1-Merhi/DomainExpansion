@@ -1,23 +1,55 @@
 ﻿public class SceneManager
 {
-    private IScene _currentScene;
-    private readonly GameEngine _engine;
+    private IScene? _currentScene;
+    private readonly AssetManager _assets;
+    private readonly GameSettings _settings;
 
-    public SceneManager(GameEngine engine)
+    // Not a scene transition, so it's surfaced separately for the engine to act on.
+    public event Action? QuitRequested;
+
+    public SceneManager(AssetManager assets, GameSettings settings)
     {
-        _engine = engine;
+        _assets = assets;
+        _settings = settings;
     }
 
     public void ChangeScene(IScene newScene)
     {
         // 1. Clean up the current scene if one exists
-        _currentScene?.Unload();
+        if (_currentScene is not null)
+        {
+            _currentScene.EventRaised -= OnSceneEvent;
+            _currentScene.Unload();
+        }
 
         // 2. Switch to the new scene
         _currentScene = newScene;
+        _currentScene.EventRaised += OnSceneEvent;
 
-        // 3. Initialize the new scene, injecting the engine (Assets/Settings)
-        _currentScene?.Init(_engine);
+        // 3. Initialize the new scene with only what it needs
+        _currentScene.Init(_assets, _settings);
+    }
+
+    // The scene reports what happened; the SceneManager decides what happens next.
+    private void OnSceneEvent(GameEvent gameEvent)
+    {
+        if (gameEvent == GameEvent.QuitRequested)
+        {
+            QuitRequested?.Invoke();
+            return;
+        }
+
+        IScene nextScene = gameEvent switch
+        {
+            GameEvent.PlayRequested => new Level1Scene(),
+            GameEvent.MainMenuRequested => new MainMenuScene(),
+            GameEvent.Level1Completed => new Level2Scene(),
+            GameEvent.Level2Completed => new MainMenuScene(),
+            GameEvent.PlayerDied => new Level1Scene(),
+            _ => throw new ArgumentOutOfRangeException(nameof(gameEvent), gameEvent, null),
+        };
+
+        ChangeScene(nextScene);
     }
 
     public void Update(float deltaTime)
@@ -32,8 +64,12 @@
 
     public void UnloadCurrent()
     {
-        _currentScene?.Unload();
-        _currentScene = null;
+        if (_currentScene is not null)
+        {
+            _currentScene.EventRaised -= OnSceneEvent;
+            _currentScene.Unload();
+            _currentScene = null;
+        }
     }
 }
 
