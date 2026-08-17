@@ -15,6 +15,8 @@ public class MainMenuScene : IScene
         _settings = settings;
         _selectedIndex = 0;
         _inSettings = false;
+
+        _assets.PlayBgm("intro");
     }
 
     public void Update(float deltaTime)
@@ -115,5 +117,6 @@ public class MainMenuScene : IScene
 
     public void Unload()
     {
+        _assets.StopBgm();
     }
 }

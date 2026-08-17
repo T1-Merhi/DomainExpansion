@@ -90,6 +90,15 @@
         }
     }
 
+    public void StopBgm()
+    {
+        if (_currentBgm.HasValue)
+        {
+            Raylib.StopMusicStream(_currentBgm.Value);
+            _currentBgm = null;
+        }
+    }
+
     public void UpdateAudio()
     {
         // Highly optimized: Only update the single stream that is actually playing
