@@ -292,7 +292,11 @@ public sealed class World
 
     private void TickEnemies()
     {
-        for (int i = 0; i < Enemies.ActiveCount; i++)
+        // Snapshot the count: a spawner adds enemies during this pass, and they
+        // should not also be ticked on the tick they were created.
+        int count = Enemies.ActiveCount;
+
+        for (int i = 0; i < count; i++)
         {
             Enemy e = Enemies[i];
             Behaviors.For(e.Type).Tick(e, this);
