@@ -33,11 +33,6 @@
         Assets.LoadAll();
         Assets.ApplyVolumeSettings();
 
-        // Scaffolding probe - #13 replaces this with the real weapon catalog load.
-        var weapons = JsonData.Load<WeaponCatalog>("weapons.json");
-        Console.WriteLine($"Data: loaded {weapons.Weapons.Count} weapon definition(s) from weapons.json");
-        foreach (var w in weapons.Weapons) Console.WriteLine($"  - {w.Id}: {w.Name}");
-
         // Initialize SceneManager and load the first scene
         Scenes = new SceneManager(Assets, Settings);
         Scenes.QuitRequested += () => _shouldQuit = true;

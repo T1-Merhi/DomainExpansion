@@ -1,8 +1,45 @@
 {
   "schemaVersion": 1,
   "weapons": [
-    { "id": "rifle", "name": "Rifle" },
-    { "id": "shotgun", "name": "Shotgun" },
-    { "id": "pistol", "name": "Pistol" }
+    {
+      "id": "rifle",
+      "name": "Rifle",
+      "onHit": "Direct",
+      "stats": {
+        "Damage": 10,
+        "FireRate": 8,
+        "BulletSpeed": 900,
+        "BulletLifetime": 1.5,
+        "ProjectileCount": 1,
+        "Spread": 0
+      }
+    },
+    {
+      "id": "shotgun",
+      "name": "Shotgun",
+      "onHit": "Direct",
+      "stats": {
+        "Damage": 7,
+        "FireRate": 1.5,
+        "BulletSpeed": 700,
+        "BulletLifetime": 0.7,
+        "ProjectileCount": 3,
+        "Spread": 14
+      }
+    },
+    {
+      "id": "pistol",
+      "name": "Pistol",
+      "onHit": "Explode",
+      "stats": {
+        "Damage": 14,
+        "FireRate": 2.5,
+        "BulletSpeed": 800,
+        "BulletLifetime": 2.0,
+        "ProjectileCount": 1,
+        "Spread": 0,
+        "ExplosionRadius": 70
+      }
+    }
   ]
 }
