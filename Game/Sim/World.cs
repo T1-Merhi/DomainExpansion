@@ -25,7 +25,27 @@ public sealed class World
     public readonly Pool<Bullet> PlayerBullets = new(512);
     public readonly Pool<Enemy> Enemies = new(256);
 
+    public readonly Pool<Explosion> Explosions = new(64);
+
     private readonly SpatialGrid _grid = new();
+
+    public void AddExplosion(Vector2 position, float radius)
+    {
+        Explosion e = Explosions.Rent();
+        e.Position = position;
+        e.Radius = radius;
+        e.TicksLeft = Explosion.LifeTicks;
+    }
+
+    private void StepExplosions()
+    {
+        for (int i = Explosions.ActiveCount - 1; i >= 0; i--)
+        {
+            Explosion e = Explosions[i];
+            e.TicksLeft--;
+            if (e.TicksLeft <= 0) Explosions.ReturnAt(i);
+        }
+    }
 
     /// <summary>
     /// Deterministic PRNG. Explicit rather than System.Random so spawn positions
@@ -79,6 +99,7 @@ public sealed class World
         ResolveBulletHits();
         ResolveEnemyContact();
 
+        StepExplosions();
         SweepDeadEnemies();
     }
 

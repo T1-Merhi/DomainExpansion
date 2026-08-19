@@ -10,10 +10,27 @@ public sealed class WorldRenderer
 
     public void Draw(World world, int stepsLastFrame)
     {
+        DrawExplosions(world);
         DrawEnemies(world);
         DrawBullets(world);
         DrawPlayer(world.Player);
         if (ShowDebug) DrawDebugOverlay(world, stepsLastFrame);
+    }
+
+    private void DrawExplosions(World world)
+    {
+        for (int i = 0; i < world.Explosions.ActiveCount; i++)
+        {
+            Explosion e = world.Explosions[i];
+
+            // Expands to full radius while fading, so the blast reads as an
+            // event rather than a static disc.
+            float t = e.Progress;
+            float radius = e.Radius * (0.4f + 0.6f * t);
+            var color = new Color(255, 140, 40, (int)(200 * (1f - t)));
+
+            Raylib.DrawCircleV(e.Position, radius, color);
+        }
     }
 
     private void DrawEnemies(World world)
