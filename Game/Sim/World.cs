@@ -18,9 +18,9 @@ public sealed class World
     /// <summary>Latest input snapshot, written by the scene before ticking.</summary>
     public InputState Input;
 
-    public readonly WeaponCatalog Weapons = WeaponCatalog.Load();
-    public readonly EnemyCatalog EnemyDefs = EnemyCatalog.Load();
-    public readonly UpgradeCatalog UpgradeDefs = UpgradeCatalog.Load();
+    public readonly WeaponCatalog Weapons = ConfigStore.Current.Weapons;
+    public readonly EnemyCatalog EnemyDefs = ConfigStore.Current.Enemies;
+    public readonly UpgradeCatalog UpgradeDefs = ConfigStore.Current.Upgrades;
     public readonly WaveGenerator Waves;
     public readonly WaveRunner WaveRunner;
     public readonly EnemyBehaviors Behaviors = new();
@@ -71,7 +71,7 @@ public sealed class World
         b.Position = position;
         b.Velocity = velocity;
         b.Damage = damage;
-        b.Radius = 5f;
+        b.Radius = Tuning.Player.EnemyBulletRadius;
         b.LifeTicks = Math.Max(1, (int)(lifetime * TickRate));
         b.ExplosionRadius = 0f;
         b.Tint = EnemyBulletTint;
@@ -122,7 +122,7 @@ public sealed class World
 
         FloatingText t = FloatingTexts.Rent();
         t.Position = position;
-        t.Velocity = new Vector2(NextFloat(-26f, 26f), -70f);
+        t.Velocity = new Vector2(NextFloat(-26f, 26f), -Tuning.Effects.FloatingTextRiseSpeed);
         t.Amount = amount;
         t.TicksLeft = FloatingText.LifeTicks;
         t.Kind = kind;
@@ -148,6 +148,7 @@ public sealed class World
         if (amount <= 0f || enemy.IsDead) return;
 
         enemy.TakeDamage(amount);
+        RecordDamage(amount);
         AddFloatingText(enemy.Position, amount, FloatingTextKind.Damage);
 
         if (!enemy.IsDead) return;
@@ -210,11 +211,48 @@ public sealed class World
         // The triangle starts with one weapon on its primary side.
         Player.Mounts[0].Equip(Weapons.Find("rifle"));
 
-        Waves = new WaveGenerator(WaveConfig.Load());
+        Waves = new WaveGenerator(ConfigStore.Current.Waves);
         WaveRunner = new WaveRunner(this, Waves);
     }
 
     public int WaveNumber => WaveRunner.WaveNumber;
+
+    // --- Admin toggles ---------------------------------------------------
+    // Inert in player mode: only the test arena ever sets them, and it is
+    // unreachable outside admin mode.
+
+    public bool GodMode;
+    public bool InfiniteCoins;
+
+    /// <summary>Multiplies real time before it reaches the accumulator, never the step itself.</summary>
+    public float TimeScale = 1f;
+
+    // --- Damage telemetry ------------------------------------------------
+
+    private const int DpsWindowTicks = TickRate * 10;
+    private readonly float[] _damageWindow = new float[DpsWindowTicks];
+    private int _damageCursor;
+    private float _damageInWindow;
+
+    /// <summary>Damage dealt to enemies per second, averaged over the last ten seconds.</summary>
+    public float RecentDps => _damageInWindow / (DpsWindowTicks / (float)TickRate);
+
+    private void RecordDamage(float amount)
+    {
+        _damageWindow[_damageCursor] += amount;
+        _damageInWindow += amount;
+    }
+
+    /// <summary>Advances the ring buffer, retiring the slot that just aged out.</summary>
+    private void StepDamageWindow()
+    {
+        _damageCursor = (_damageCursor + 1) % DpsWindowTicks;
+
+        _damageInWindow -= _damageWindow[_damageCursor];
+        _damageWindow[_damageCursor] = 0f;
+
+        if (_damageInWindow < 0f) _damageInWindow = 0f;
+    }
 
     /// <summary>
     /// Screen shake, in world units of maximum offset. Decays every tick, and
@@ -222,8 +260,8 @@ public sealed class World
     /// </summary>
     public float ShakeAmount { get; private set; }
 
-    private const float ShakeCap = 14f;
-    private const float ShakeDecayPerTick = 0.86f;
+    private static float ShakeCap => Tuning.Effects.ShakeCap;
+    private static float ShakeDecayPerTick => Tuning.Effects.ShakeDecay;
 
     public void AddShake(float amount)
     {
@@ -274,6 +312,7 @@ public sealed class World
         StepExplosions();
         StepFloatingTexts();
         StepShake();
+        StepDamageWindow();
         SweepDeadEnemies();
 
         // Last, so a wave sees the arena state this tick produced rather than
@@ -367,7 +406,7 @@ public sealed class World
     /// </summary>
     private void ResolveEnemyBulletHits()
     {
-        if (Player.IsDead) return;
+        if (Player.IsDead || GodMode) return;
 
         for (int i = EnemyBullets.ActiveCount - 1; i >= 0; i--)
         {
@@ -376,14 +415,14 @@ public sealed class World
             if (!Collision.CirclesOverlap(b.Position, b.Radius, Player.Position, Player.Radius)) continue;
 
             Player.TakeDamage(b.Damage);
-            AddShake(4f);
+            AddShake(Tuning.Effects.ShakeOnPlayerHit);
             EnemyBullets.ReturnAt(i);
         }
     }
 
     private void ResolveEnemyContact()
     {
-        if (Player.IsDead) return;
+        if (Player.IsDead || GodMode) return;
 
         for (int i = 0; i < Enemies.ActiveCount; i++)
         {
@@ -507,7 +546,7 @@ public sealed class World
             b.Position = origin;
             b.Velocity = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * speed;
             b.Damage = damage;
-            b.Radius = 4f;
+            b.Radius = Tuning.Player.BulletRadius;
             b.LifeTicks = Math.Max(1, (int)(lifetime * TickRate));
             b.ExplosionRadius = explosion;
             b.Tint = weapon.Def.PackedTint;

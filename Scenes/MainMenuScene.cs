@@ -10,7 +10,12 @@ public class MainMenuScene : IScene
     private const int RowHeight = 52;
     private const int RowGap = 10;
 
-    private static readonly string[] MainOptions = ["Play", "Settings", "Quit"];
+    private static readonly string[] PlayerOptions = ["Play", "Settings", "Quit"];
+    private static readonly string[] AdminOptions = ["Play", "Test Arena", "Config Editor", "Settings", "Quit"];
+
+    /// <summary>Admin entries are absent from the array itself in player mode,
+    /// so they cannot be selected, drawn or reached by index.</summary>
+    private static string[] MainOptions => AppMode.IsAdmin ? AdminOptions : PlayerOptions;
 
     private enum Page { Main, Settings }
 
@@ -116,11 +121,13 @@ public class MainMenuScene : IScene
 
     private void Activate(int index)
     {
-        switch (index)
+        switch (MainOptions[index])
         {
-            case 0: EventRaised?.Invoke(GameEvent.PlayRequested); break;
-            case 1: _page = Page.Settings; _selected = 0; break;
-            case 2: EventRaised?.Invoke(GameEvent.QuitRequested); break;
+            case "Play": EventRaised?.Invoke(GameEvent.PlayRequested); break;
+            case "Test Arena": EventRaised?.Invoke(GameEvent.TestArenaRequested); break;
+            case "Config Editor": EventRaised?.Invoke(GameEvent.AdminRequested); break;
+            case "Settings": _page = Page.Settings; _selected = 0; break;
+            case "Quit": EventRaised?.Invoke(GameEvent.QuitRequested); break;
         }
     }
 
@@ -130,7 +137,7 @@ public class MainMenuScene : IScene
     {
         _settings.Save();
         _page = Page.Main;
-        _selected = 1; // land back on "Settings"
+        _selected = Array.IndexOf(MainOptions, "Settings");
         _draggingSlider = false;
     }
 

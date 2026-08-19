@@ -15,6 +15,29 @@ public sealed class HudRenderer
         DrawActiveWeapon(world.Player);
         DrawCurrency(world);
         DrawWaveStatus(world);
+        DrawConfigStamp();
+    }
+
+    /// <summary>
+    /// Admin-only config stamp. The whole point of the two-instance workflow is
+    /// confirming a reload actually happened, which needs a visible version
+    /// that changes. Absent in player mode.
+    /// </summary>
+    private void DrawConfigStamp()
+    {
+        if (!AppMode.IsAdmin) return;
+
+        ConfigStore store = ConfigStore.Current;
+
+        string text = $"config v{store.Version}  {store.LoadedAt:HH:mm:ss}";
+        int y = Raylib.GetScreenHeight() - Margin - 76;
+
+        Raylib.DrawText(text, Margin, y, 14, new Color(120, 120, 132, 255));
+
+        if (!store.HasWarning) return;
+
+        Raylib.DrawText($"config warning: {store.LastWarning}", Margin, y - 18, 14,
+            new Color(206, 122, 20, 255));
     }
 
     /// <summary>

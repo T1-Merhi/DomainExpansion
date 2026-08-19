@@ -168,19 +168,29 @@ public sealed class WorldRenderer
                     Raylib.DrawRectangleV(
                         at - new Vector2(e.Radius, e.Radius),
                         new Vector2(e.Radius * 2f, e.Radius * 2f),
-                        HitFlash(e, Color.Red));
+                        HitFlash(e, EnemyColor(world, e)));
                     break;
 
                 case EnemyType.Shooter:
-                    Raylib.DrawPoly(at, 4, e.Radius, 0f, HitFlash(e, Color.Purple));
+                    Raylib.DrawPoly(at, 4, e.Radius, 0f, HitFlash(e, EnemyColor(world, e)));
                     break;
 
                 case EnemyType.Spawner:
-                    Raylib.DrawPoly(at, 5, e.Radius, 0f, HitFlash(e, Color.Orange));
+                    Raylib.DrawPoly(at, 5, e.Radius, 0f, HitFlash(e, EnemyColor(world, e)));
                     DrawSpawnTelegraph(at, e);
                     break;
             }
         }
+    }
+
+    /// <summary>
+    /// Body colour from the enemy definition, so type identification is a data
+    /// decision rather than a switch statement in the renderer.
+    /// </summary>
+    private static Color EnemyColor(World world, Enemy enemy)
+    {
+        EnemyDef def = world.EnemyDefs.Find(enemy.Type);
+        return def == null ? Color.Gray : FromPacked(def.PackedTint);
     }
 
     /// <summary>Unpacks the sim's opaque RGBA value into a drawable colour.</summary>

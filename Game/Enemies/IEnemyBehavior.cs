@@ -90,7 +90,7 @@ public sealed class ChaserBehavior : IEnemyBehavior
 public sealed class ShooterBehavior : IEnemyBehavior
 {
     /// <summary>Half-width of the band it will sit still inside, in world units.</summary>
-    private const float BandHalfWidth = 40f;
+    private static float BandHalfWidth => Tuning.Effects.ShooterBandHalfWidth;
 
     public void Tick(Enemy enemy, World world)
     {
@@ -142,13 +142,13 @@ public sealed class ShooterBehavior : IEnemyBehavior
 public sealed class SpawnerBehavior : IEnemyBehavior
 {
     /// <summary>Ticks before a spawn during which the telegraph ring is drawn.</summary>
-    public const int TelegraphTicks = 36;
+    public static int TelegraphTicks => Tuning.Effects.SpawnerTelegraphTicks;
 
     /// <summary>Fraction of spawns that are chasers; the rest are shooters.</summary>
-    private const float ChaserShare = 0.7f;
+    private static float ChaserShare => Tuning.Effects.ChaserShare;
 
-    private const float SpawnRingRadius = 34f;
-    private const float BandHalfWidth = 60f;
+    private static float SpawnRingRadius => Tuning.Effects.SpawnRingRadius;
+    private static float BandHalfWidth => Tuning.Effects.SpawnerBandHalfWidth;
 
     public void Tick(Enemy enemy, World world)
     {

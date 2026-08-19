@@ -6,7 +6,28 @@ public sealed class EnemyDef
 {
     public string Type { get; set; } = "";
     public float Radius { get; set; } = 14f;
+
+    /// <summary>Body colour as "RRGGBB". Gameplay-meaningful: it is how type is identified.</summary>
+    public string Tint { get; set; } = "";
+
     public Dictionary<string, float> Stats { get; set; } = new();
+
+    private uint _packedTint;
+    private bool _tintParsed;
+
+    public uint PackedTint
+    {
+        get
+        {
+            if (!_tintParsed)
+            {
+                _packedTint = ColorHex.Parse(Tint);
+                _tintParsed = true;
+            }
+
+            return _packedTint;
+        }
+    }
 
     public EnemyType ParsedType =>
         Enum.TryParse<EnemyType>(Type, ignoreCase: true, out var t) ? t : EnemyType.Chaser;

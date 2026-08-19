@@ -1,0 +1,13 @@
+{
+  "fields": {
+    "radius":            { "label": "Turret Radius",      "min": 8,   "max": 60,   "step": 1 },
+    "moveSpeed":         { "label": "Move Speed",         "min": 40,  "max": 800,  "step": 5 },
+    "maxHealth":         { "label": "Max Health",         "min": 10,  "max": 500,  "step": 5 },
+    "turnResponse":      { "label": "Turn Response",      "min": 0.02,"max": 1,    "step": 0.01 },
+    "hitFlashTicks":     { "label": "Hit Flash Ticks",    "min": 1,   "max": 60,   "step": 1 },
+    "muzzleFlashTicks":  { "label": "Muzzle Flash Ticks", "min": 1,   "max": 30,   "step": 1 },
+    "maxSides":          { "label": "Max Sides",          "min": 3,   "max": 24,   "step": 1 },
+    "bulletRadius":      { "label": "Bullet Radius",      "min": 1,   "max": 20,   "step": 0.5 },
+    "enemyBulletRadius": { "label": "Enemy Bullet Radius","min": 1,   "max": 20,   "step": 0.5 }
+  }
+}

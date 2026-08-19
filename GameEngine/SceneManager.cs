@@ -51,12 +51,22 @@
             return;
         }
 
+        // Admin destinations are gated here rather than only at the call site,
+        // so player mode cannot reach them even if something raises the event.
+        if ((gameEvent == GameEvent.AdminRequested || gameEvent == GameEvent.TestArenaRequested)
+            && !AppMode.IsAdmin)
+        {
+            return;
+        }
+
         IScene nextScene = gameEvent switch
         {
             GameEvent.PlayRequested => new GameScene(),
             GameEvent.RestartRequested => new GameScene(),
             GameEvent.MainMenuRequested => new MainMenuScene(),
             GameEvent.PlayerDied => new DeathScene(),
+            GameEvent.AdminRequested => new AdminScene(),
+            GameEvent.TestArenaRequested => new TestArenaScene(),
             _ => throw new ArgumentOutOfRangeException(nameof(gameEvent), gameEvent, null),
         };
 

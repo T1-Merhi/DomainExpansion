@@ -67,6 +67,20 @@ public sealed class Shop
         return true;
     }
 
+    /// <summary>
+    /// Applies an upgrade without charging for it. Admin only - the test arena
+    /// uses it to reach a late-game loadout instantly. Deliberately bypasses
+    /// CanBuy's affordability check but still respects the level cap.
+    /// </summary>
+    public bool GrantFree(UpgradeDef def, int mountIndex)
+    {
+        if (def == null || IsMaxed(def, mountIndex)) return false;
+        if (def.Kind == UpgradeKind.MountStat && _world.Player.Mounts[mountIndex].IsEmpty) return false;
+
+        Apply(def, mountIndex);
+        return true;
+    }
+
     private void Apply(UpgradeDef def, int mountIndex)
     {
         Player player = _world.Player;

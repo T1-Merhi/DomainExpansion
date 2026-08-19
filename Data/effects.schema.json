@@ -1,0 +1,17 @@
+{
+  "fields": {
+    "hitShakeTicks":         { "label": "Enemy Hit Shake",     "min": 0, "max": 40,  "step": 1 },
+    "explosionTicks":        { "label": "Explosion Life",      "min": 2, "max": 60,  "step": 1 },
+    "floatingTextTicks":     { "label": "Float Text Life",     "min": 6, "max": 180, "step": 1 },
+    "floatingTextDamping":   { "label": "Float Text Damping",  "min": 0.5, "max": 1, "step": 0.01 },
+    "floatingTextRiseSpeed": { "label": "Float Text Rise",     "min": 0, "max": 300, "step": 5 },
+    "spawnerTelegraphTicks": { "label": "Spawn Telegraph",     "min": 0, "max": 180, "step": 1 },
+    "chaserShare":           { "label": "Chaser Share",        "min": 0, "max": 1,   "step": 0.05 },
+    "shooterBandHalfWidth":  { "label": "Shooter Band",        "min": 5, "max": 200, "step": 5 },
+    "spawnerBandHalfWidth":  { "label": "Spawner Band",        "min": 5, "max": 300, "step": 5 },
+    "spawnRingRadius":       { "label": "Spawn Ring Radius",   "min": 0, "max": 200, "step": 2 },
+    "shakeCap":              { "label": "Shake Cap",           "min": 0, "max": 60,  "step": 1 },
+    "shakeDecay":            { "label": "Shake Decay",         "min": 0.5, "max": 0.99, "step": 0.01 },
+    "shakeOnPlayerHit":      { "label": "Shake On Player Hit", "min": 0, "max": 40,  "step": 1 }
+  }
+}
