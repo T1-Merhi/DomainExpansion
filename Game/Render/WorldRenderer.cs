@@ -10,9 +10,38 @@ public sealed class WorldRenderer
 
     public void Draw(World world, int stepsLastFrame)
     {
+        DrawEnemies(world);
         DrawBullets(world);
         DrawPlayer(world.Player);
         if (ShowDebug) DrawDebugOverlay(world, stepsLastFrame);
+    }
+
+    private void DrawEnemies(World world)
+    {
+        for (int i = 0; i < world.Enemies.ActiveCount; i++)
+        {
+            Enemy e = world.Enemies[i];
+
+            // Shape and colour per the spec: red square, purple diamond,
+            // orange pentagon - so type is identifiable at a glance.
+            switch (e.Type)
+            {
+                case EnemyType.Chaser:
+                    Raylib.DrawRectangleV(
+                        e.Position - new Vector2(e.Radius, e.Radius),
+                        new Vector2(e.Radius * 2f, e.Radius * 2f),
+                        Color.Red);
+                    break;
+
+                case EnemyType.Shooter:
+                    Raylib.DrawPoly(e.Position, 4, e.Radius, 0f, Color.Purple);
+                    break;
+
+                case EnemyType.Spawner:
+                    Raylib.DrawPoly(e.Position, 5, e.Radius, 0f, Color.Orange);
+                    break;
+            }
+        }
     }
 
     private void DrawBullets(World world)
@@ -72,5 +101,6 @@ public sealed class WorldRenderer
         Raylib.DrawText($"fps {Raylib.GetFPS()}", 200, y + 22, 18, Color.Gray);
         Raylib.DrawText($"sides {world.Player.SideCount}  active {world.Player.ActiveSide}", 340, y, 18, Color.Gray);
         Raylib.DrawText($"bullets {world.PlayerBullets.ActiveCount}/{world.PlayerBullets.Capacity}", 340, y + 22, 18, Color.Gray);
+        Raylib.DrawText($"enemies {world.Enemies.ActiveCount}/{world.Enemies.Capacity}", 560, y, 18, Color.Gray);
     }
 }

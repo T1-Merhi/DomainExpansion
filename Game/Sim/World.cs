@@ -19,7 +19,27 @@ public sealed class World
     public InputState Input;
 
     public readonly WeaponCatalog Weapons = WeaponCatalog.Load();
+    public readonly EnemyCatalog EnemyDefs = EnemyCatalog.Load();
+    public readonly EnemyBehaviors Behaviors = new();
+
     public readonly Pool<Bullet> PlayerBullets = new(512);
+    public readonly Pool<Enemy> Enemies = new(256);
+
+    /// <summary>
+    /// Deterministic PRNG. Explicit rather than System.Random so spawn positions
+    /// stay reproducible for a given seed under the fixed timestep.
+    /// </summary>
+    private uint _rng = 0x9E3779B9;
+
+    public float NextFloat()
+    {
+        _rng ^= _rng << 13;
+        _rng ^= _rng >> 17;
+        _rng ^= _rng << 5;
+        return (_rng & 0xFFFFFF) / (float)0x1000000;
+    }
+
+    public float NextFloat(float min, float max) => min + NextFloat() * (max - min);
 
     public World(Vector2 arenaSize)
     {
@@ -51,6 +71,56 @@ public sealed class World
 
         TickWeapons();
         StepBullets();
+        TickEnemies();
+    }
+
+    /// <summary>Spawns one enemy of the given type at a world position.</summary>
+    public Enemy SpawnEnemy(EnemyType type, Vector2 position)
+    {
+        EnemyDef def = EnemyDefs.Find(type);
+        if (def == null) return null;
+
+        Enemy e = Enemies.Rent();
+        e.Type = type;
+        e.Position = position;
+        e.Velocity = Vector2.Zero;
+        e.Radius = def.Radius;
+        e.Stats = def.CreateStatBlock();
+        e.Health = e.Stats.Get(StatId.MaxHealth);
+        e.ActionCooldown = 0;
+        e.PendingRemoval = false;
+        return e;
+    }
+
+    /// <summary>A point just outside the arena edge, where waves arrive from.</summary>
+    public Vector2 RandomEdgePosition(float margin = 40f)
+    {
+        float t = NextFloat();
+
+        return (int)(NextFloat() * 4f) switch
+        {
+            0 => new Vector2(t * ArenaSize.X, -margin),
+            1 => new Vector2(t * ArenaSize.X, ArenaSize.Y + margin),
+            2 => new Vector2(-margin, t * ArenaSize.Y),
+            _ => new Vector2(ArenaSize.X + margin, t * ArenaSize.Y),
+        };
+    }
+
+    private void TickEnemies()
+    {
+        for (int i = 0; i < Enemies.ActiveCount; i++)
+        {
+            Enemy e = Enemies[i];
+            Behaviors.For(e.Type).Tick(e, this);
+            e.Position += e.Velocity * FixedStep;
+        }
+
+        // Backwards: ReturnAt swaps the last active item into the freed slot.
+        for (int i = Enemies.ActiveCount - 1; i >= 0; i--)
+        {
+            Enemy e = Enemies[i];
+            if (e.IsDead || e.PendingRemoval) Enemies.ReturnAt(i);
+        }
     }
 
     private void TickWeapons()
