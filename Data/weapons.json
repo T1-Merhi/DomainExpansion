@@ -5,6 +5,7 @@
       "id": "rifle",
       "name": "Rifle",
       "onHit": "Direct",
+      "tint": "2F6FD0",
       "stats": {
         "Damage": 10,
         "FireRate": 8,
@@ -18,6 +19,7 @@
       "id": "shotgun",
       "name": "Shotgun",
       "onHit": "Direct",
+      "tint": "23A455",
       "stats": {
         "Damage": 7,
         "FireRate": 1.5,
@@ -31,6 +33,7 @@
       "id": "pistol",
       "name": "Pistol",
       "onHit": "Explode",
+      "tint": "E8541F",
       "stats": {
         "Damage": 14,
         "FireRate": 2.5,

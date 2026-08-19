@@ -24,6 +24,11 @@ public sealed class Enemy : IPoolable
     /// <summary>Generic countdown used by behaviours for firing or spawning.</summary>
     public int ActionCooldown;
 
+    /// <summary>Ticks of hit-reaction shake left. Purely cosmetic.</summary>
+    public int HitShakeTicks;
+
+    public const int HitShakeDuration = 7;
+
     /// <summary>Set when the enemy should be removed after behaviours have run.</summary>
     public bool PendingRemoval;
 
@@ -38,12 +43,18 @@ public sealed class Enemy : IPoolable
         Radius = 0f;
         Stats = null;
         ActionCooldown = 0;
+        HitShakeTicks = 0;
         PendingRemoval = false;
     }
 
     public void TakeDamage(float amount)
     {
         if (amount <= 0f) return;
+
         Health = MathF.Max(0f, Health - amount);
+
+        // Restart the shake on every hit, so sustained fire keeps it shuddering
+        // rather than the reaction lapsing between shots.
+        HitShakeTicks = HitShakeDuration;
     }
 }

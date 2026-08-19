@@ -34,6 +34,9 @@ public sealed class World
     /// </summary>
     public readonly Pool<Bullet> EnemyBullets = new(256);
 
+    /// <summary>Packed RGBA for enemy fire, so it stays visually distinct from every weapon.</summary>
+    private const uint EnemyBulletTint = 0x9B45C9FFu;
+
     public void SpawnEnemyBullet(Vector2 position, Vector2 velocity, float damage, float lifetime)
     {
         Bullet b = EnemyBullets.Rent();
@@ -43,6 +46,7 @@ public sealed class World
         b.Radius = 5f;
         b.LifeTicks = Math.Max(1, (int)(lifetime * TickRate));
         b.ExplosionRadius = 0f;
+        b.Tint = EnemyBulletTint;
     }
 
     private void StepEnemyBullets()
@@ -127,6 +131,7 @@ public sealed class World
 
         _grid.Rebuild(Enemies);
         ResolveBulletHits();
+        ResolveBulletBlocks();
         ResolveEnemyBulletHits();
         ResolveEnemyContact();
 
@@ -177,8 +182,39 @@ public sealed class World
     }
 
     /// <summary>
+    /// Player fire shoots enemy projectiles out of the air. Both are consumed,
+    /// so blocking costs a bullet and cannot clear a whole volley for free.
+    ///
+    /// Runs after ResolveBulletHits so a bullet that already hit an enemy is
+    /// gone, and before ResolveEnemyBulletHits so anything blocked this tick
+    /// never gets the chance to damage the player.
+    /// </summary>
+    private void ResolveBulletBlocks()
+    {
+        for (int i = PlayerBullets.ActiveCount - 1; i >= 0; i--)
+        {
+            Bullet p = PlayerBullets[i];
+
+            for (int j = EnemyBullets.ActiveCount - 1; j >= 0; j--)
+            {
+                Bullet e = EnemyBullets[j];
+
+                if (!Collision.CirclesOverlap(p.Position, p.Radius, e.Position, e.Radius)) continue;
+
+                // An explosive round still detonates when it blocks something.
+                if (p.ExplosionRadius > 0f) ApplyExplosion(p.Position, p.ExplosionRadius, p.Damage);
+
+                EnemyBullets.ReturnAt(j);
+                PlayerBullets.ReturnAt(i);
+                break;
+            }
+        }
+    }
+
+    /// <summary>
     /// Enemy fire tests only against the player. No enemy pool lookup and no
-    /// owner filtering, because the two bullet pools are already disjoint.
+    /// owner filtering - the two pools are separate, so anything surviving
+    /// ResolveBulletBlocks is by definition still in flight.
     /// </summary>
     private void ResolveEnemyBulletHits()
     {
@@ -261,6 +297,8 @@ public sealed class World
             Enemy e = Enemies[i];
             Behaviors.For(e.Type).Tick(e, this);
             e.Position += e.Velocity * FixedStep;
+
+            if (e.HitShakeTicks > 0) e.HitShakeTicks--;
         }
 
         // Removal is deferred to SweepDeadEnemies, after collision has run.
@@ -313,6 +351,7 @@ public sealed class World
             b.Radius = 4f;
             b.LifeTicks = Math.Max(1, (int)(lifetime * TickRate));
             b.ExplosionRadius = explosion;
+            b.Tint = weapon.Def.PackedTint;
         }
     }
 
