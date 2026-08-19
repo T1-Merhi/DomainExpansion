@@ -25,6 +25,8 @@ public sealed class World
     public readonly Pool<Bullet> PlayerBullets = new(512);
     public readonly Pool<Enemy> Enemies = new(256);
 
+    private readonly SpatialGrid _grid = new();
+
     /// <summary>
     /// Deterministic PRNG. Explicit rather than System.Random so spawn positions
     /// stay reproducible for a given seed under the fixed timestep.
@@ -72,6 +74,81 @@ public sealed class World
         TickWeapons();
         StepBullets();
         TickEnemies();
+
+        _grid.Rebuild(Enemies);
+        ResolveBulletHits();
+        ResolveEnemyContact();
+
+        SweepDeadEnemies();
+    }
+
+    private void ResolveBulletHits()
+    {
+        for (int i = PlayerBullets.ActiveCount - 1; i >= 0; i--)
+        {
+            Bullet b = PlayerBullets[i];
+
+            int hit = -1;
+            _grid.QueryCircle(b.Position, b.Radius, index =>
+            {
+                if (hit >= 0) return;
+
+                Enemy e = Enemies[index];
+                if (e.IsDead) return;
+
+                if (Collision.CirclesOverlap(b.Position, b.Radius, e.Position, e.Radius)) hit = index;
+            });
+
+            if (hit < 0) continue;
+
+            if (b.ExplosionRadius > 0f) ApplyExplosion(b.Position, b.ExplosionRadius, b.Damage);
+            else Enemies[hit].TakeDamage(b.Damage);
+
+            PlayerBullets.ReturnAt(i);
+        }
+    }
+
+    /// <summary>Area damage falling off linearly to zero at the rim.</summary>
+    private void ApplyExplosion(Vector2 centre, float radius, float damage)
+    {
+        _grid.QueryCircle(centre, radius, index =>
+        {
+            Enemy e = Enemies[index];
+            if (e.IsDead) return;
+
+            float distance = Vector2.Distance(centre, e.Position) - e.Radius;
+            if (distance > radius) return;
+
+            float falloff = 1f - MathF.Max(0f, distance) / radius;
+            e.TakeDamage(damage * falloff);
+        });
+    }
+
+    private void ResolveEnemyContact()
+    {
+        if (Player.IsDead) return;
+
+        for (int i = 0; i < Enemies.ActiveCount; i++)
+        {
+            Enemy e = Enemies[i];
+            if (e.IsDead) continue;
+
+            // Chasers deal their damage by detonating (#19), not by touching.
+            if (e.Type != EnemyType.Shooter && e.Type != EnemyType.Spawner) continue;
+
+            if (!Collision.CirclesOverlap(Player.Position, Player.Radius, e.Position, e.Radius)) continue;
+
+            Player.TakeDamage(e.Stats.Get(StatId.ContactDamage) * FixedStep);
+        }
+    }
+
+    private void SweepDeadEnemies()
+    {
+        for (int i = Enemies.ActiveCount - 1; i >= 0; i--)
+        {
+            Enemy e = Enemies[i];
+            if (e.IsDead || e.PendingRemoval) Enemies.ReturnAt(i);
+        }
     }
 
     /// <summary>Spawns one enemy of the given type at a world position.</summary>
@@ -115,12 +192,7 @@ public sealed class World
             e.Position += e.Velocity * FixedStep;
         }
 
-        // Backwards: ReturnAt swaps the last active item into the freed slot.
-        for (int i = Enemies.ActiveCount - 1; i >= 0; i--)
-        {
-            Enemy e = Enemies[i];
-            if (e.IsDead || e.PendingRemoval) Enemies.ReturnAt(i);
-        }
+        // Removal is deferred to SweepDeadEnemies, after collision has run.
     }
 
     private void TickWeapons()
