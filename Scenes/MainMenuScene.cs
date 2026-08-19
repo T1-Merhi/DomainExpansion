@@ -119,11 +119,7 @@ public class MainMenuScene : IScene
         }
     }
 
-    private void ToggleFullscreen()
-    {
-        _settings.IsFullScreen = !_settings.IsFullScreen;
-        Raylib.ToggleFullscreen();
-    }
+    private void ToggleFullscreen() => Display.ToggleFullscreen(_settings);
 
     private void CloseSettings()
     {

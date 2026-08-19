@@ -19,8 +19,12 @@
 
     private void Initialize()
     {
-        Raylib.InitWindow(Settings.Width, Settings.Height, "Custom C# Game Engine");
-        if (Settings.IsFullScreen) Raylib.ToggleFullscreen();
+        Raylib.InitWindow(Settings.Width, Settings.Height, "Domain Expansion");
+
+        // Apply after the window exists, so the framebuffer is resized to the
+        // monitor rather than stretched from the windowed size.
+        Display.Apply(Settings);
+
         Raylib.SetTargetFPS(Settings.TargetFPS);
 
         // Scenes bind ESC themselves (back to menu), so stop Raylib closing the
