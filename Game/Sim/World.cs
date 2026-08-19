@@ -106,6 +106,9 @@ public sealed class World
         e.Radius = radius;
         e.TicksLeft = Explosion.LifeTicks;
         e.Tint = tint;
+
+        // Scaled by blast size so a grenade registers harder than a death pop.
+        AddShake(radius * 0.05f);
     }
 
     /// <summary>
@@ -213,6 +216,29 @@ public sealed class World
 
     public int WaveNumber => WaveRunner.WaveNumber;
 
+    /// <summary>
+    /// Screen shake, in world units of maximum offset. Decays every tick, and
+    /// is capped so a heavy wave cannot make the arena unreadable.
+    /// </summary>
+    public float ShakeAmount { get; private set; }
+
+    private const float ShakeCap = 14f;
+    private const float ShakeDecayPerTick = 0.86f;
+
+    public void AddShake(float amount)
+    {
+        if (amount <= 0f) return;
+
+        ShakeAmount = MathF.Min(ShakeCap, ShakeAmount + amount);
+    }
+
+    private void StepShake()
+    {
+        if (ShakeAmount <= 0.01f) { ShakeAmount = 0f; return; }
+
+        ShakeAmount *= ShakeDecayPerTick;
+    }
+
     public void Resize(Vector2 arenaSize) => ArenaSize = arenaSize;
 
     public void Tick()
@@ -232,6 +258,7 @@ public sealed class World
         Player.AimAt(Input.MousePosition);
         Player.StepRotation();
         Player.TickHitFlash();
+        Player.TickMuzzleFlash();
 
         TickWeapons();
         StepBullets();
@@ -246,6 +273,7 @@ public sealed class World
 
         StepExplosions();
         StepFloatingTexts();
+        StepShake();
         SweepDeadEnemies();
 
         // Last, so a wave sees the arena state this tick produced rather than
@@ -348,6 +376,7 @@ public sealed class World
             if (!Collision.CirclesOverlap(b.Position, b.Radius, Player.Position, Player.Radius)) continue;
 
             Player.TakeDamage(b.Damage);
+            AddShake(4f);
             EnemyBullets.ReturnAt(i);
         }
     }
@@ -447,6 +476,7 @@ public sealed class World
 
         FireMount(Player.ActiveSide, mount.Weapon);
         mount.Weapon.StartCooldown();
+        Player.MuzzleFlashTicks = Player.MuzzleFlashDuration;
     }
 
     private void FireMount(int side, WeaponInstance weapon)
