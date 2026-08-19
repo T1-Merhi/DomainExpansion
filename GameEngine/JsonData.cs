@@ -10,6 +10,10 @@ public static class JsonData
         PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
+
+        // Without this, enums must be authored as integers - data files would
+        // say 1 instead of "Explode", and any string value fails the whole file.
+        Converters = { new JsonStringEnumConverter(allowIntegerValues: true) },
     };
 
     public static string PathFor(string fileName) =>

@@ -52,6 +52,13 @@ public sealed class ChaserBehavior : IEnemyBehavior
         }
     }
 
+    /// <summary>
+    /// Note the two distances are measured differently, which is why the data
+    /// must keep ProximityRadius well inside ExplosionRadius: the trigger is
+    /// surface to surface, while blast falloff runs from the enemy centre to
+    /// the player's surface. Tuned so a detonation at trigger range lands most
+    /// of its damage rather than clipping the rim.
+    /// </summary>
     private static void Detonate(Enemy enemy, World world)
     {
         float radius = enemy.Stats.Get(StatId.ExplosionRadius);
