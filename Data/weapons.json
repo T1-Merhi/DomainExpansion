@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "weapons": [
+    { "id": "rifle", "name": "Rifle" },
+    { "id": "shotgun", "name": "Shotgun" },
+    { "id": "pistol", "name": "Pistol" }
+  ]
+}
