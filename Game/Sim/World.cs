@@ -21,6 +21,8 @@ public sealed class World
     public readonly WeaponCatalog Weapons = WeaponCatalog.Load();
     public readonly EnemyCatalog EnemyDefs = EnemyCatalog.Load();
     public readonly UpgradeCatalog UpgradeDefs = UpgradeCatalog.Load();
+    public readonly WaveGenerator Waves;
+    public readonly WaveRunner WaveRunner;
     public readonly EnemyBehaviors Behaviors = new();
 
     public readonly Pool<Bullet> PlayerBullets = new(512);
@@ -204,7 +206,12 @@ public sealed class World
 
         // The triangle starts with one weapon on its primary side.
         Player.Mounts[0].Equip(Weapons.Find("rifle"));
+
+        Waves = new WaveGenerator(WaveConfig.Load());
+        WaveRunner = new WaveRunner(this, Waves);
     }
+
+    public int WaveNumber => WaveRunner.WaveNumber;
 
     public void Resize(Vector2 arenaSize) => ArenaSize = arenaSize;
 
@@ -240,6 +247,10 @@ public sealed class World
         StepExplosions();
         StepFloatingTexts();
         SweepDeadEnemies();
+
+        // Last, so a wave sees the arena state this tick produced rather than
+        // the previous one - otherwise it declares itself clear a tick early.
+        WaveRunner.Tick();
     }
 
     private void ResolveBulletHits()
@@ -380,9 +391,13 @@ public sealed class World
         e.Velocity = Vector2.Zero;
         e.Radius = def.Radius;
         e.Stats = def.CreateStatBlock();
-        e.Health = e.Stats.Get(StatId.MaxHealth);
         e.ActionCooldown = 0;
         e.PendingRemoval = false;
+
+        // Scaling is layered on before health is read, so an enemy spawned
+        // mid-wave by a spawner is as tough as one from the opening batch.
+        Waves.ApplyScaling(e, Math.Max(1, WaveRunner.WaveNumber));
+
         return e;
     }
 

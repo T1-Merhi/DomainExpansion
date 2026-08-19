@@ -165,6 +165,9 @@ public class GameScene : IScene
         // Debug currency, so the shop can be exercised without farming kills.
         if (Raylib.IsKeyPressed(KeyboardKey.G)) _world.AddCoins(DebugCoinGrant);
 
+        // Skip the remaining rest and start the next wave immediately.
+        if (Raylib.IsKeyPressed(KeyboardKey.Enter)) _world.WaveRunner.SkipRest();
+
         if (Raylib.IsKeyPressed(KeyboardKey.F3))
             _renderer.ShowDebug = !_renderer.ShowDebug;
 
@@ -213,7 +216,7 @@ public class GameScene : IScene
     public void Draw()
     {
         Raylib.DrawText("WASD move   LMB fire   RMB shop   wheel side   E weapon   3-8 shape", 20, 20, 18, Color.DarkGray);
-        Raylib.DrawText($"J damage   H heal   G +{DebugCoinGrant} coins   Z/X/C spawn enemy   ESC pause   F3 debug",
+        Raylib.DrawText($"J damage   H heal   G coins   Z/X/C spawn   ENTER skip rest   ESC pause   F3 debug",
             20, 42, 18, Color.DarkGray);
 
         _renderer.Draw(_world, _stepsLastFrame);
