@@ -3,6 +3,7 @@ public class MainMenuScene : IScene
     public event Action<GameEvent>? EventRaised;
 
     private static readonly string[] MainOptions = ["Play", "Settings", "Quit"];
+    private const float VolumeStep = 0.1f;
 
     private AssetManager _assets;
     private GameSettings _settings;
@@ -42,31 +43,52 @@ public class MainMenuScene : IScene
 
     private void UpdateSettingsMenu()
     {
-        // Fullscreen, Master Volume, Back
-        HandleVerticalNavigation(3);
+        // Fullscreen, Master Volume, Music Volume, SFX Volume, Back
+        HandleVerticalNavigation(5);
 
-        if (_selectedIndex == 0 && Raylib.IsKeyPressed(KeyboardKey.Enter))
+        bool confirm = Raylib.IsKeyPressed(KeyboardKey.Enter) || Raylib.IsKeyPressed(KeyboardKey.Space);
+
+        float delta = 0f;
+        if (Raylib.IsKeyPressed(KeyboardKey.Left)) delta = -VolumeStep;
+        else if (Raylib.IsKeyPressed(KeyboardKey.Right)) delta = VolumeStep;
+
+        switch (_selectedIndex)
         {
-            _settings.IsFullScreen = !_settings.IsFullScreen;
-            Raylib.ToggleFullscreen();
+            case 0:
+                if (confirm)
+                {
+                    _settings.IsFullScreen = !_settings.IsFullScreen;
+                    Raylib.ToggleFullscreen();
+                }
+                break;
+
+            case 1:
+                if (delta != 0f) _settings.MasterVolume = Adjust(_settings.MasterVolume, delta);
+                break;
+
+            case 2:
+                if (delta != 0f) _settings.MusicVolume = Adjust(_settings.MusicVolume, delta);
+                break;
+
+            case 3:
+                if (delta != 0f) _settings.SfxVolume = Adjust(_settings.SfxVolume, delta);
+                break;
+
+            case 4:
+                if (confirm)
+                {
+                    _settings.Save();
+                    _inSettings = false;
+                    _selectedIndex = 1; // land back on "Settings" in the main list
+                }
+                break;
         }
-        else if (_selectedIndex == 1 && Raylib.IsKeyPressed(KeyboardKey.Left))
-        {
-            _settings.MasterVolume = Math.Max(0f, _settings.MasterVolume - 0.1f);
-            Raylib.SetMasterVolume(_settings.MasterVolume);
-        }
-        else if (_selectedIndex == 1 && Raylib.IsKeyPressed(KeyboardKey.Right))
-        {
-            _settings.MasterVolume = Math.Min(1f, _settings.MasterVolume + 0.1f);
-            Raylib.SetMasterVolume(_settings.MasterVolume);
-        }
-        else if (_selectedIndex == 2 && (Raylib.IsKeyPressed(KeyboardKey.Enter) || Raylib.IsKeyPressed(KeyboardKey.Space)))
-        {
-            _settings.Save();
-            _inSettings = false;
-            _selectedIndex = 1; // land back on "Settings" in the main list
-        }
+
+        // Push the new levels onto anything currently audible so the change is heard immediately.
+        if (delta != 0f) _assets.ApplyVolumeSettings();
     }
+
+    private static float Adjust(float value, float delta) => Math.Clamp(value + delta, 0f, 1f);
 
     private void HandleVerticalNavigation(int optionCount)
     {
@@ -103,6 +125,8 @@ public class MainMenuScene : IScene
         [
             $"Fullscreen: {(_settings.IsFullScreen ? "On" : "Off")}",
             $"Master Volume: {_settings.MasterVolume:P0}",
+            $"Music Volume: {_settings.MusicVolume:P0}",
+            $"SFX Volume: {_settings.SfxVolume:P0}",
             "Back",
         ];
 

@@ -1,6 +1,9 @@
 ﻿public class GameSettings
 {
-    private const string SettingsFile = "settings.json";
+    // Resolved against the app directory, not the working directory, so `dotnet run`
+    // and the published exe always read and write the same file.
+    private static readonly string SettingsFile =
+        Path.Combine(AppContext.BaseDirectory, "settings.json");
 
     // Display
     public int Width { get; set; } = 1280;

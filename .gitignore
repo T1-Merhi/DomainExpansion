@@ -47,6 +47,9 @@ artifacts/
 *.coverage
 *.coveragexml
 
+# User-local runtime state (generated next to the exe on first run)
+settings.json
+
 # OS files
 .DS_Store
 Thumbs.db

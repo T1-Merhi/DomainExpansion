@@ -1,6 +1,7 @@
 ﻿public class SceneManager
 {
     private IScene? _currentScene;
+    private GameEvent? _pendingEvent;
     private readonly AssetManager _assets;
     private readonly GameSettings _settings;
 
@@ -15,6 +16,9 @@
 
     public void ChangeScene(IScene newScene)
     {
+        // Drop anything still queued from the outgoing scene so it can't drive the next transition.
+        _pendingEvent = null;
+
         // 1. Clean up the current scene if one exists
         if (_currentScene is not null)
         {
@@ -31,7 +35,15 @@
     }
 
     // The scene reports what happened; the SceneManager decides what happens next.
+    // Queued rather than handled inline: the raising scene is still executing inside
+    // its own Update(), so unloading it here would pull the rug out from under it.
     private void OnSceneEvent(GameEvent gameEvent)
+    {
+        // First event of the frame wins; later ones are ignored.
+        _pendingEvent ??= gameEvent;
+    }
+
+    private void ApplyEvent(GameEvent gameEvent)
     {
         if (gameEvent == GameEvent.QuitRequested)
         {
@@ -55,6 +67,13 @@
     public void Update(float deltaTime)
     {
         _currentScene?.Update(deltaTime);
+
+        // Safe to swap scenes now that the current scene's Update has returned.
+        if (_pendingEvent is GameEvent pending)
+        {
+            _pendingEvent = null;
+            ApplyEvent(pending);
+        }
     }
 
     public void Draw()

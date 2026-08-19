@@ -24,10 +24,10 @@
         Raylib.SetTargetFPS(Settings.TargetFPS);
 
         Raylib.InitAudioDevice();
-        Raylib.SetMasterVolume(Settings.MasterVolume);
 
-        Assets = new AssetManager();
+        Assets = new AssetManager(Settings);
         Assets.LoadAll();
+        Assets.ApplyVolumeSettings();
 
         // Initialize SceneManager and load the first scene
         Scenes = new SceneManager(Assets, Settings);

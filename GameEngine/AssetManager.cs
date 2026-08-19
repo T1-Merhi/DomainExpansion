@@ -12,16 +12,28 @@
     // Track the currently playing music for optimized updates
     private Music? _currentBgm;
 
+    private readonly GameSettings _settings;
+
+    public AssetManager(GameSettings settings)
+    {
+        _settings = settings;
+    }
+
     public void LoadAll()
     {
         // Note: Raylib.InitWindow() and InitAudioDevice() MUST be called before this!
-        LoadTexturesToDictionary("Assets/Textures/Sprites", Sprites);
-        LoadTexturesToDictionary("Assets/Textures/Tiles", Tiles);
-        LoadTexturesToDictionary("Assets/Textures/Backgrounds", Backgrounds);
+        LoadTexturesToDictionary(AssetPath("Textures/Sprites"), Sprites);
+        LoadTexturesToDictionary(AssetPath("Textures/Tiles"), Tiles);
+        LoadTexturesToDictionary(AssetPath("Textures/Backgrounds"), Backgrounds);
 
-        LoadSoundsToDictionary("Assets/Sounds/SFX", Sfx);
-        LoadMusicToDictionary("Assets/Sounds/BGM", Bgm);
+        LoadSoundsToDictionary(AssetPath("Sounds/SFX"), Sfx);
+        LoadMusicToDictionary(AssetPath("Sounds/BGM"), Bgm);
     }
+
+    // Assets are copied next to the exe, so resolve them there rather than against
+    // the working directory, which differs between `dotnet run` and a direct launch.
+    private static string AssetPath(string relativePath) =>
+        Path.Combine(AppContext.BaseDirectory, "Assets", relativePath);
 
     private void LoadTexturesToDictionary(string folderPath, Dictionary<string, Texture2D> dict)
     {
@@ -81,12 +93,37 @@
         // Start the new music
         if (Bgm.TryGetValue(key, out var music))
         {
+            Raylib.SetMusicVolume(music, _settings.MusicVolume);
             Raylib.PlayMusicStream(music);
             _currentBgm = music;
         }
         else
         {
             Console.WriteLine($"Error: Could not find BGM with key '{key}'");
+        }
+    }
+
+    public void PlaySfx(string key)
+    {
+        if (Sfx.TryGetValue(key, out var sound))
+        {
+            Raylib.SetSoundVolume(sound, _settings.SfxVolume);
+            Raylib.PlaySound(sound);
+        }
+        else
+        {
+            Console.WriteLine($"Error: Could not find SFX with key '{key}'");
+        }
+    }
+
+    // Re-applies the current volume settings to live audio (e.g. after the settings menu changes them).
+    public void ApplyVolumeSettings()
+    {
+        Raylib.SetMasterVolume(_settings.MasterVolume);
+
+        if (_currentBgm.HasValue)
+        {
+            Raylib.SetMusicVolume(_currentBgm.Value, _settings.MusicVolume);
         }
     }
 
