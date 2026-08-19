@@ -14,6 +14,10 @@ public class GameScene : IScene
     private float _accumulator;
     private int _stepsLastFrame;
 
+    // Held across frames so a scroll during a frame that runs no tick
+    // (accumulator below one step) is not silently dropped.
+    private int _pendingWheel;
+
     public void Init(AssetManager assets, GameSettings settings)
     {
         _assets = assets;
@@ -30,7 +34,11 @@ public class GameScene : IScene
         HandleSceneInput();
 
         _world.Resize(ScreenSize());
+
+        _pendingWheel += (int)Raylib.GetMouseWheelMove();
+
         _world.Input = ReadInput();
+        _world.Input.WheelDelta = _pendingWheel;
 
         _accumulator += deltaTime;
 
@@ -41,6 +49,9 @@ public class GameScene : IScene
             _accumulator -= World.FixedStep;
             steps++;
         }
+
+        // The sim zeroes WheelDelta once it consumes the scroll.
+        if (steps > 0) _pendingWheel = _world.Input.WheelDelta;
 
         // Hit the clamp: discard the leftover time so the next frame starts clean.
         if (steps == MaxStepsPerFrame) _accumulator = 0f;
@@ -67,7 +78,6 @@ public class GameScene : IScene
             MousePosition = Raylib.GetMousePosition(),
             MoveAxis = axis,
             FireHeld = Raylib.IsMouseButtonDown(MouseButton.Left),
-            WheelDelta = (int)Raylib.GetMouseWheelMove(),
         };
     }
 
@@ -93,6 +103,10 @@ public class GameScene : IScene
             {
                 _world.Player.SideCount = sides;
                 if (_world.Player.ActiveSide >= sides) _world.Player.ActiveSide = 0;
+
+                // Geometry changed under it; easing from the old angle looks wrong.
+                _world.Player.AimAt(_world.Input.MousePosition);
+                _world.Player.SnapRotation();
             }
         }
     }

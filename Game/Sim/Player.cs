@@ -80,13 +80,51 @@ public sealed class Player
     /// <summary>Barrel position for the given side.</summary>
     public Vector2 SideMidpoint(int side) => Position + SideNormal(side) * Apothem;
 
-    /// <summary>Rotates so the active side's normal points at <paramref name="target"/>.</summary>
+    /// <summary>
+    /// Rotation the polygon wants to reach so the active side faces the cursor.
+    /// Rotation eases toward this rather than snapping, so switching weapons
+    /// reads as the polygon spinning that side into place.
+    /// </summary>
+    public float TargetRotation { get; private set; }
+
+    /// <summary>Fraction of the remaining angle closed per tick.</summary>
+    public float TurnResponse = 0.35f;
+
+    /// <summary>Sets the target rotation so the active side's normal points at the cursor.</summary>
     public void AimAt(Vector2 target)
     {
         Vector2 delta = target - Position;
         if (delta.LengthSquared() < 0.0001f) return;
 
         float angle = MathF.Atan2(delta.Y, delta.X);
-        Rotation = angle - (2 * ActiveSide + 1) * MathF.PI / SideCount;
+        TargetRotation = angle - (2 * ActiveSide + 1) * MathF.PI / SideCount;
+    }
+
+    /// <summary>
+    /// Eases Rotation toward TargetRotation along the shorter arc, so a switch
+    /// that crosses the -pi/pi boundary does not unwind the long way round.
+    /// </summary>
+    public void StepRotation()
+    {
+        float diff = WrapAngle(TargetRotation - Rotation);
+        Rotation = WrapAngle(Rotation + diff * TurnResponse);
+    }
+
+    /// <summary>Snaps instantly - used when the shape changes and easing would look wrong.</summary>
+    public void SnapRotation() => Rotation = TargetRotation;
+
+    /// <summary>Selects a side by offset, wrapping around the polygon.</summary>
+    public void CycleActiveSide(int delta)
+    {
+        if (delta == 0 || SideCount <= 0) return;
+
+        ActiveSide = ((ActiveSide + delta) % SideCount + SideCount) % SideCount;
+    }
+
+    /// <summary>Normalises to (-pi, pi].</summary>
+    public static float WrapAngle(float radians)
+    {
+        radians = MathF.IEEERemainder(radians, MathF.Tau);
+        return radians;
     }
 }
