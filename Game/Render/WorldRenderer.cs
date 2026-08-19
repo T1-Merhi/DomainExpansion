@@ -71,6 +71,15 @@ public sealed class WorldRenderer
             Color color = b.ExplosionRadius > 0f ? Color.Red : Color.DarkBlue;
             Raylib.DrawCircleV(b.Position, b.Radius, color);
         }
+
+        // Enemy fire is drawn as an outlined ring so it never reads as the
+        // player's own bullets in a crowded screen.
+        for (int i = 0; i < world.EnemyBullets.ActiveCount; i++)
+        {
+            Bullet b = world.EnemyBullets[i];
+            Raylib.DrawCircleV(b.Position, b.Radius, Color.Purple);
+            Raylib.DrawCircleLinesV(b.Position, b.Radius + 2f, Color.Magenta);
+        }
     }
 
     private void DrawPlayer(Player player)
