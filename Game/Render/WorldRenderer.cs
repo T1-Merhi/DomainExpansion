@@ -14,30 +14,38 @@ public sealed class WorldRenderer
         DrawEnemies(world);
         DrawBullets(world);
         DrawPlayer(world.Player);
-        DrawDamageNumbers(world);
+        DrawFloatingTexts(world);
         if (ShowDebug) DrawDebugOverlay(world, stepsLastFrame);
     }
 
-    private void DrawDamageNumbers(World world)
+    private void DrawFloatingTexts(World world)
     {
-        for (int i = 0; i < world.DamageNumbers.ActiveCount; i++)
+        for (int i = 0; i < world.FloatingTexts.ActiveCount; i++)
         {
-            DamageNumber d = world.DamageNumbers[i];
+            FloatingText f = world.FloatingTexts[i];
 
-            float t = d.Progress;
+            float t = f.Progress;
 
             // Hold full opacity for the first half, then fade - fading from the
             // start makes small numbers unreadable before they register.
             byte alpha = t < 0.5f ? (byte)255 : (byte)(255 * (1f - (t - 0.5f) * 2f));
 
-            string text = MathF.Round(d.Amount).ToString("0");
-            int size = 18;
+            bool isCoin = f.Kind == FloatingTextKind.Coin;
+
+            string text = isCoin
+                ? "+" + MathF.Round(f.Amount).ToString("0")
+                : MathF.Round(f.Amount).ToString("0");
+
+            int size = isCoin ? 20 : 18;
             int w = Raylib.MeasureText(text, size);
 
+            Color tint = isCoin
+                ? new Color(255, 205, 60, (int)alpha)     // gold for currency
+                : new Color(255, 240, 120, (int)alpha);   // pale for damage
+
             var shadow = new Color(0, 0, 0, (int)(alpha * 0.45f));
-            Raylib.DrawText(text, (int)d.Position.X - w / 2 + 1, (int)d.Position.Y + 1, size, shadow);
-            Raylib.DrawText(text, (int)d.Position.X - w / 2, (int)d.Position.Y, size,
-                new Color(255, 240, 120, (int)alpha));
+            Raylib.DrawText(text, (int)f.Position.X - w / 2 + 1, (int)f.Position.Y + 1, size, shadow);
+            Raylib.DrawText(text, (int)f.Position.X - w / 2, (int)f.Position.Y, size, tint);
         }
     }
 
@@ -271,6 +279,6 @@ public sealed class WorldRenderer
         Raylib.DrawText($"bullets {world.PlayerBullets.ActiveCount}/{world.PlayerBullets.Capacity}", 340, y + 22, 18, Color.Gray);
         Raylib.DrawText($"enemies {world.Enemies.ActiveCount}/{world.Enemies.Capacity}", 560, y, 18, Color.Gray);
         Raylib.DrawText($"enemy shots {world.EnemyBullets.ActiveCount}", 560, y + 22, 18, Color.Gray);
-        Raylib.DrawText($"dmg numbers {world.DamageNumbers.ActiveCount}/{world.DamageNumbers.Capacity}", 760, y, 18, Color.Gray);
+        Raylib.DrawText($"floats {world.FloatingTexts.ActiveCount}/{world.FloatingTexts.Capacity}", 760, y, 18, Color.Gray);
     }
 }

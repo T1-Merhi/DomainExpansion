@@ -13,6 +13,23 @@ public sealed class HudRenderer
         DrawHurtVignette(world.Player);
         DrawHealthBar(world.Player);
         DrawActiveWeapon(world.Player);
+        DrawCurrency(world);
+    }
+
+    /// <summary>Coins top-right, where it does not compete with the health bar.</summary>
+    private void DrawCurrency(World world)
+    {
+        string coins = $"{world.Coins}";
+        int size = 24;
+        int w = Raylib.MeasureText(coins, size);
+        int x = Raylib.GetScreenWidth() - Margin - w;
+
+        Raylib.DrawText(coins, x, Margin, size, new Color(214, 168, 40, 255));
+
+        const string label = "COINS";
+        int lw = Raylib.MeasureText(label, 14);
+        Raylib.DrawText(label, Raylib.GetScreenWidth() - Margin - lw, Margin + size + 2, 14,
+            new Color(150, 150, 160, 255));
     }
 
     /// <summary>
