@@ -12,6 +12,10 @@ public class GameScene : IScene
     private World _world;
     private WorldRenderer _renderer;
     private HudRenderer _hud;
+    private ShopRenderer _shopUi;
+    private Shop _shop;
+
+    private bool _shopOpen;
 
     // Death is raised from the tick loop, which can run several times per
     // frame; this makes sure the transition is requested exactly once.
@@ -31,13 +35,26 @@ public class GameScene : IScene
         _world = new World(ScreenSize());
         _renderer = new WorldRenderer();
         _hud = new HudRenderer();
+        _shopUi = new ShopRenderer();
+        _shop = new Shop(_world);
         _accumulator = 0f;
         _stepsLastFrame = 0;
         _deathRaised = false;
+        _shopOpen = false;
     }
 
     public void Update(float deltaTime)
     {
+        HandleShopToggle();
+
+        if (_shopOpen)
+        {
+            // Frozen. The accumulator is deliberately not advanced, so closing
+            // the shop cannot release a burst of banked ticks.
+            _stepsLastFrame = 0;
+            return;
+        }
+
         HandleSceneInput();
 
         _world.Resize(ScreenSize());
@@ -93,6 +110,22 @@ public class GameScene : IScene
             MoveAxis = axis,
             FireHeld = Raylib.IsMouseButtonDown(MouseButton.Left),
         };
+    }
+
+    /// <summary>
+    /// Right-click toggles the shop anywhere, per the agreed design. ESC closes
+    /// it rather than leaving to the menu, so the shop consumes the key while
+    /// it is open and quitting mid-shop takes two presses instead of one.
+    /// </summary>
+    private void HandleShopToggle()
+    {
+        if (Raylib.IsMouseButtonPressed(MouseButton.Right))
+        {
+            _shopOpen = !_shopOpen;
+            return;
+        }
+
+        if (_shopOpen && Raylib.IsKeyPressed(KeyboardKey.Escape)) _shopOpen = false;
     }
 
     private void HandleSceneInput()
@@ -151,11 +184,13 @@ public class GameScene : IScene
 
     public void Draw()
     {
-        Raylib.DrawText("WASD move   LMB fire   wheel side   E weapon   3-8 shape", 20, 20, 18, Color.DarkGray);
+        Raylib.DrawText("WASD move   LMB fire   RMB shop   wheel side   E weapon   3-8 shape", 20, 20, 18, Color.DarkGray);
         Raylib.DrawText("J damage   H heal   Z/X/C spawn enemy   ESC menu   F3 debug", 20, 42, 18, Color.DarkGray);
 
         _renderer.Draw(_world, _stepsLastFrame);
         _hud.Draw(_world);
+
+        if (_shopOpen) _shopUi.Draw(_world, _shop);
     }
 
     public void Unload()
