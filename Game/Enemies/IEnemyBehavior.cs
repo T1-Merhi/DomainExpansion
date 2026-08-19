@@ -134,10 +134,66 @@ public sealed class ShooterBehavior : IEnemyBehavior
     }
 }
 
-/// <summary>Placeholder until #22.</summary>
+/// <summary>
+/// Orange pentagon. Never attacks; it keeps its distance and periodically
+/// emits chasers and shooters. Its threat is entirely indirect, so leaving one
+/// alive is what makes a wave escalate.
+/// </summary>
 public sealed class SpawnerBehavior : IEnemyBehavior
 {
+    /// <summary>Ticks before a spawn during which the telegraph ring is drawn.</summary>
+    public const int TelegraphTicks = 36;
+
+    /// <summary>Fraction of spawns that are chasers; the rest are shooters.</summary>
+    private const float ChaserShare = 0.7f;
+
+    private const float SpawnRingRadius = 34f;
+    private const float BandHalfWidth = 60f;
+
     public void Tick(Enemy enemy, World world)
     {
+        Player player = world.Player;
+
+        Vector2 toPlayer = player.Position - enemy.Position;
+        float distance = toPlayer.Length();
+        if (distance < 0.001f) return;
+
+        Vector2 direction = toPlayer / distance;
+
+        // Same deadband approach as the shooter, so it settles instead of
+        // oscillating on the threshold.
+        float standoff = enemy.Stats.Get(StatId.StandoffDistance);
+        float speed = enemy.Stats.Get(StatId.MoveSpeed);
+
+        if (distance > standoff + BandHalfWidth) enemy.Velocity = direction * speed;
+        else if (distance < standoff - BandHalfWidth) enemy.Velocity = -direction * speed;
+        else enemy.Velocity = Vector2.Zero;
+
+        TickSpawning(enemy, world);
+    }
+
+    private static void TickSpawning(Enemy enemy, World world)
+    {
+        if (enemy.ActionCooldown > 0)
+        {
+            enemy.ActionCooldown--;
+            return;
+        }
+
+        int count = Math.Max(1, enemy.Stats.GetInt(StatId.SpawnCount));
+
+        for (int i = 0; i < count; i++)
+        {
+            // Ring them around the spawner so they do not stack on one point.
+            float angle = world.NextFloat() * MathF.Tau;
+            Vector2 offset = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * SpawnRingRadius;
+
+            EnemyType type = world.NextFloat() < ChaserShare ? EnemyType.Chaser : EnemyType.Shooter;
+
+            world.SpawnEnemy(type, enemy.Position + offset);
+        }
+
+        float interval = enemy.Stats.Get(StatId.SpawnInterval);
+        enemy.ActionCooldown = Math.Max(1, (int)MathF.Round(interval * World.TickRate));
     }
 }

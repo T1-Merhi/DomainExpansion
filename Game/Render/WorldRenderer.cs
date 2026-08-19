@@ -53,6 +53,22 @@ public sealed class WorldRenderer
         return new Vector2(sign * amplitude, sign * amplitude * 0.55f);
     }
 
+    /// <summary>
+    /// Ring that contracts onto the spawner as its next emission approaches.
+    /// Derived from ActionCooldown, so it needs no extra simulation state, and
+    /// it warns before the beat rather than reporting it afterwards.
+    /// </summary>
+    private static void DrawSpawnTelegraph(Vector2 at, Enemy enemy)
+    {
+        if (enemy.ActionCooldown <= 0 || enemy.ActionCooldown > SpawnerBehavior.TelegraphTicks) return;
+
+        float t = enemy.ActionCooldown / (float)SpawnerBehavior.TelegraphTicks;
+        float radius = enemy.Radius + 4f + 26f * t;
+        var color = new Color(255, 165, 0, (int)(60 + 160 * (1f - t)));
+
+        Raylib.DrawCircleLinesV(at, radius, color);
+    }
+
     private void DrawEnemies(World world)
     {
         for (int i = 0; i < world.Enemies.ActiveCount; i++)
@@ -77,6 +93,7 @@ public sealed class WorldRenderer
 
                 case EnemyType.Spawner:
                     Raylib.DrawPoly(at, 5, e.Radius, 0f, Color.Orange);
+                    DrawSpawnTelegraph(at, e);
                     break;
             }
         }
