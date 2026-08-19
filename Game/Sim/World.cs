@@ -89,6 +89,7 @@ public sealed class World
     }
 
     private readonly SpatialGrid _grid = new();
+    private readonly BulletGrid _enemyBulletGrid = new();
 
     /// <summary>Orange blast, used for chaser detonations and explosive rounds.</summary>
     private const uint BlastTint = 0xFF8C28FFu;
@@ -191,7 +192,21 @@ public sealed class World
     /// Deterministic PRNG. Explicit rather than System.Random so spawn positions
     /// stay reproducible for a given seed under the fixed timestep.
     /// </summary>
-    private uint _rng = 0x9E3779B9;
+    private uint _rng;
+
+    /// <summary>
+    /// Seeded per run, so runs differ. Kept as an explicit field rather than
+    /// System.Random so a run stays reproducible from its seed - the test
+    /// arena needs comparable repeats when balancing.
+    /// </summary>
+    public uint Seed { get; private set; }
+
+    public void Reseed(uint seed)
+    {
+        // Zero is a fixed point for xorshift: it would return 0 forever.
+        Seed = seed == 0 ? 0x9E3779B9u : seed;
+        _rng = Seed;
+    }
 
     public float NextFloat()
     {
@@ -210,6 +225,8 @@ public sealed class World
 
         // The triangle starts with one weapon on its primary side.
         Player.Mounts[0].Equip(Weapons.Find("rifle"));
+
+        Reseed((uint)Environment.TickCount);
 
         Waves = new WaveGenerator(ConfigStore.Current.Waves);
         WaveRunner = new WaveRunner(this, Waves);
@@ -379,23 +396,37 @@ public sealed class World
     /// </summary>
     private void ResolveBulletBlocks()
     {
+        if (PlayerBullets.ActiveCount == 0 || EnemyBullets.ActiveCount == 0) return;
+
+        // Indexed rather than compared pairwise: hundreds of player bullets
+        // against hundreds of enemy bullets is a six-figure pair count every
+        // tick, and this reduces it to the few sharing a cell.
+        _enemyBulletGrid.Rebuild(EnemyBullets);
+
         for (int i = PlayerBullets.ActiveCount - 1; i >= 0; i--)
         {
             Bullet p = PlayerBullets[i];
 
-            for (int j = EnemyBullets.ActiveCount - 1; j >= 0; j--)
+            int hit = -1;
+            _enemyBulletGrid.QueryCircle(p.Position, p.Radius, index =>
             {
-                Bullet e = EnemyBullets[j];
+                if (hit >= 0 || index >= EnemyBullets.ActiveCount) return;
 
-                if (!Collision.CirclesOverlap(p.Position, p.Radius, e.Position, e.Radius)) continue;
+                Bullet e = EnemyBullets[index];
+                if (Collision.CirclesOverlap(p.Position, p.Radius, e.Position, e.Radius)) hit = index;
+            });
 
-                // An explosive round still detonates when it blocks something.
-                if (p.ExplosionRadius > 0f) ApplyExplosion(p.Position, p.ExplosionRadius, p.Damage);
+            if (hit < 0) continue;
 
-                EnemyBullets.ReturnAt(j);
-                PlayerBullets.ReturnAt(i);
-                break;
-            }
+            // An explosive round still detonates when it blocks something.
+            if (p.ExplosionRadius > 0f) ApplyExplosion(p.Position, p.ExplosionRadius, p.Damage);
+
+            EnemyBullets.ReturnAt(hit);
+            PlayerBullets.ReturnAt(i);
+
+            // Returning swapped a different bullet into that slot, so the index
+            // built above no longer describes the pool.
+            _enemyBulletGrid.Rebuild(EnemyBullets);
         }
     }
 
@@ -429,12 +460,18 @@ public sealed class World
             Enemy e = Enemies[i];
             if (e.IsDead) continue;
 
-            // Chasers deal their damage by detonating (#19), not by touching.
-            if (e.Type != EnemyType.Shooter && e.Type != EnemyType.Spawner) continue;
+            // Driven by data rather than a type allowlist: an enemy that
+            // detonates delivers its damage through the blast, and one with no
+            // contact damage has nothing to apply. A new enemy type therefore
+            // works without editing this line.
+            if (e.Detonates) continue;
+
+            float contact = e.Stats.Get(StatId.ContactDamage);
+            if (contact <= 0f) continue;
 
             if (!Collision.CirclesOverlap(Player.Position, Player.Radius, e.Position, e.Radius)) continue;
 
-            Player.TakeDamage(e.Stats.Get(StatId.ContactDamage) * FixedStep);
+            Player.TakeDamage(contact * FixedStep);
         }
     }
 
@@ -459,8 +496,14 @@ public sealed class World
         e.Velocity = Vector2.Zero;
         e.Radius = def.Radius;
         e.Stats = def.CreateStatBlock();
-        e.ActionCooldown = 0;
+        e.Detonates = def.Detonates;
+        e.Tint = def.PackedTint;
         e.PendingRemoval = false;
+
+        // Start on cooldown rather than ready. At zero a shooter fires on the
+        // tick it appears - offscreen, before the player can see it - and a
+        // spawner emits with no telegraph having been drawn.
+        e.ActionCooldown = InitialCooldownFor(e);
 
         // Scaling is layered on before health is read, so an enemy spawned
         // mid-wave by a spawner is as tough as one from the opening batch.
@@ -481,6 +524,21 @@ public sealed class World
             2 => new Vector2(-margin, t * ArenaSize.Y),
             _ => new Vector2(ArenaSize.X + margin, t * ArenaSize.Y),
         };
+    }
+
+    /// <summary>
+    /// One full action interval, so an enemy's first shot or spawn happens
+    /// after it has been on screen for as long as its cadence implies.
+    /// </summary>
+    private static int InitialCooldownFor(Enemy enemy)
+    {
+        float rate = enemy.Stats.Get(StatId.FireRate);
+        if (rate > 0f) return Math.Max(1, (int)MathF.Round(TickRate / rate));
+
+        float interval = enemy.Stats.Get(StatId.SpawnInterval);
+        if (interval > 0f) return Math.Max(1, (int)MathF.Round(interval * TickRate));
+
+        return 0;
     }
 
     private void TickEnemies()

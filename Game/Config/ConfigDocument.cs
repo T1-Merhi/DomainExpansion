@@ -43,10 +43,16 @@ public sealed class ConfigField
 
     public void SetNumber(float value)
     {
-        if (Step >= 1f) value = MathF.Round(value);
+        // A step of 0 comes straight from a schema file, so it must not be
+        // trusted: dividing by it yields infinity and writes a value that
+        // fails to round-trip through JSON.
+        if (Step <= 0f) { /* no quantisation */ }
+        else if (Step >= 1f) value = MathF.Round(value);
         else value = MathF.Round(value / Step) * Step;
 
         if (Bounded) value = Math.Clamp(value, Min, Max);
+
+        if (float.IsNaN(value) || float.IsInfinity(value)) return;
 
         Parent[Key] = JsonValue.Create(value);
     }
@@ -227,7 +233,10 @@ public sealed class ConfigDocument
     /// </summary>
     private void ApplySchema(ConfigField field)
     {
-        JsonObject entry = _schema?[field.Key] as JsonObject ?? _schema?[field.Path] as JsonObject;
+        // Dotted path first: a path entry is the specific override and a bare
+        // key is the general rule, so checking the key first would make every
+        // path override unreachable.
+        JsonObject entry = _schema?[field.Path] as JsonObject ?? _schema?[field.Key] as JsonObject;
 
         if (entry != null)
         {
@@ -240,17 +249,27 @@ public sealed class ConfigDocument
                 field.Bounded = true;
             }
 
-            if (entry["step"] != null) field.Step = (float)entry["step"].GetValue<double>();
+            if (entry["step"] != null)
+            {
+                float step = (float)entry["step"].GetValue<double>();
+                if (step > 0f) field.Step = step;
+            }
+
             return;
         }
 
         if (field.Kind != FieldKind.Number) return;
 
+        // Headroom rather than a mirror of the current value. Deriving the
+        // ceiling from the value itself means a field sitting at 0 can never
+        // be raised, and nothing can exceed twice its shipped setting without
+        // save-reload-drag cycles.
         float current = field.CurrentNumber;
+        float magnitude = MathF.Max(1f, MathF.Abs(current));
 
-        field.Min = current < 0f ? current * 2f : 0f;
-        field.Max = MathF.Max(1f, MathF.Abs(current) * 2f);
-        field.Step = MathF.Abs(current) < 5f ? 0.01f : 1f;
+        field.Min = current < 0f ? -magnitude * 10f : 0f;
+        field.Max = magnitude * 10f;
+        field.Step = magnitude < 5f ? 0.01f : 1f;
         field.Bounded = true;
     }
 

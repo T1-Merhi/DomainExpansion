@@ -28,7 +28,32 @@ public sealed class PauseRenderer
     /// <summary>Reset when the panel opens, so it never reopens on "Quit".</summary>
     public void Reset() => _selected = 0;
 
-    public PauseAction Draw()
+    /// <summary>
+    /// Hit-testing and selection only. Split from Draw because this raises a
+    /// scene transition, and doing that during the render pass means the frame
+    /// keeps drawing a scene that has already been asked to go away.
+    /// </summary>
+    public PauseAction HandleInput()
+    {
+        Rectangle panel = PanelRect();
+
+        HandleKeyboard();
+
+        for (int i = 0; i < Options.Length; i++)
+        {
+            Rectangle row = ButtonRect(panel, i);
+
+            if (MenuUi.HoverSelects(row)) _selected = i;
+            if (MenuUi.Clicked(row)) return ActionFor(i);
+        }
+
+        if (Raylib.IsKeyPressed(KeyboardKey.Enter) || Raylib.IsKeyPressed(KeyboardKey.Space))
+            return ActionFor(_selected);
+
+        return PauseAction.None;
+    }
+
+    public void Draw()
     {
         Rectangle panel = PanelRect();
 
@@ -44,15 +69,9 @@ public sealed class PauseRenderer
         int tw = Raylib.MeasureText(title, 28);
         Raylib.DrawText(title, centreX - tw / 2, (int)panel.Y + 22, 28, Ink);
 
-        HandleKeyboard();
-
-        PauseAction action = PauseAction.None;
-
         for (int i = 0; i < Options.Length; i++)
         {
             Rectangle row = ButtonRect(panel, i);
-
-            if (MenuUi.IsHovered(row)) _selected = i;
 
             bool selected = _selected == i;
 
@@ -66,18 +85,11 @@ public sealed class PauseRenderer
             int lw = Raylib.MeasureText(Options[i], size);
             Raylib.DrawText(Options[i], centreX - lw / 2, (int)(row.Y + (row.Height - size) / 2), size,
                 selected ? Accent : Ink);
-
-            if (MenuUi.Clicked(row)) action = ActionFor(i);
         }
-
-        if (Raylib.IsKeyPressed(KeyboardKey.Enter) || Raylib.IsKeyPressed(KeyboardKey.Space))
-            action = ActionFor(_selected);
 
         string hint = "ESC to resume";
         int hw = Raylib.MeasureText(hint, 14);
         Raylib.DrawText(hint, centreX - hw / 2, (int)(panel.Y + panel.Height) - 26, 14, Muted);
-
-        return action;
     }
 
     private void HandleKeyboard()

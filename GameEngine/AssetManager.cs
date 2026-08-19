@@ -90,17 +90,19 @@
             Raylib.StopMusicStream(_currentBgm.Value);
         }
 
-        // Start the new music
-        if (Bgm.TryGetValue(key, out var music))
+        if (!Bgm.TryGetValue(key, out var music))
         {
-            Raylib.SetMusicVolume(music, _settings.MusicVolume);
-            Raylib.PlayMusicStream(music);
-            _currentBgm = music;
-        }
-        else
-        {
+            // Clear the handle too. Leaving the stopped stream in place meant
+            // UpdateAudio kept pumping a track that is no longer playing, and a
+            // later StopBgm would stop something the caller never started.
+            _currentBgm = null;
             Console.WriteLine($"Error: Could not find BGM with key '{key}'");
+            return;
         }
+
+        Raylib.SetMusicVolume(music, _settings.MusicVolume);
+        Raylib.PlayMusicStream(music);
+        _currentBgm = music;
     }
 
     public void PlaySfx(string key)

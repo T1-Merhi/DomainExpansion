@@ -32,6 +32,12 @@ public sealed class Enemy : IPoolable
     /// <summary>Set when the enemy should be removed after behaviours have run.</summary>
     public bool PendingRemoval;
 
+    /// <summary>Copied from the definition on spawn, so collision needs no catalog lookup.</summary>
+    public bool Detonates;
+
+    /// <summary>Body colour, resolved once on spawn rather than per frame.</summary>
+    public uint Tint;
+
     public bool IsDead => Health <= 0f;
 
     public void Reset()
@@ -45,6 +51,8 @@ public sealed class Enemy : IPoolable
         ActionCooldown = 0;
         HitShakeTicks = 0;
         PendingRemoval = false;
+        Detonates = false;
+        Tint = ColorHex.White;
     }
 
     public void TakeDamage(float amount)

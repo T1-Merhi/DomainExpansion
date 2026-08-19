@@ -1,0 +1,11 @@
+{
+  "fields": {
+    "restSeconds":          { "label": "Rest Seconds",    "min": 0, "max": 120, "step": 1 },
+    "spawnBatchSize":       { "label": "Spawn Batch",     "min": 1, "max": 40,  "step": 1 },
+    "spawnIntervalSeconds": { "label": "Spawn Interval",  "min": 0.05, "max": 5, "step": 0.05 },
+    "base":                 { "label": "Base",            "min": 0, "max": 200, "step": 1 },
+    "perWave":              { "label": "Per Wave",        "min": -5, "max": 50, "step": 0.5 },
+    "min":                  { "label": "Floor",           "min": 0, "max": 10,  "step": 0.05 },
+    "max":                  { "label": "Ceiling",         "min": 0, "max": 20,  "step": 0.1 }
+  }
+}

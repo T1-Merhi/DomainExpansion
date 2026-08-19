@@ -29,8 +29,33 @@ public sealed class EnemyDef
         }
     }
 
-    public EnemyType ParsedType =>
-        Enum.TryParse<EnemyType>(Type, ignoreCase: true, out var t) ? t : EnemyType.Chaser;
+    /// <summary>
+    /// Falls back to Chaser on an unrecognised name, but says so - silently
+    /// turning a typo into a chaser hides the real problem.
+    /// </summary>
+    public EnemyType ParsedType
+    {
+        get
+        {
+            if (Enum.TryParse<EnemyType>(Type, ignoreCase: true, out var t)) return t;
+
+            if (!_typeWarned)
+            {
+                _typeWarned = true;
+                Console.WriteLine($"Enemies: unknown type '{Type}', falling back to Chaser");
+            }
+
+            return EnemyType.Chaser;
+        }
+    }
+
+    private bool _typeWarned;
+
+    /// <summary>
+    /// True when this enemy delivers its damage by detonating rather than by
+    /// touching, so contact damage must not also apply.
+    /// </summary>
+    public bool Detonates { get; set; }
 
     public StatBlock CreateStatBlock()
     {

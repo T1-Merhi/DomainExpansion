@@ -84,8 +84,11 @@ public sealed class ConfigStore
 
             return loaded;
         }
-        catch (JsonException ex)
+        catch (Exception ex)
         {
+            // Deliberately broad: deserialisation can also throw
+            // NotSupportedException, InvalidOperationException and others for
+            // a malformed file, and none of them may take down the run.
             warnings.Add($"{fileName}: {ex.Message}");
             return previous;
         }

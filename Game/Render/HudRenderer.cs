@@ -161,7 +161,9 @@ public sealed class HudRenderer
         string text = active.IsEmpty ? "(empty mount)" : active.Weapon.Name;
 
         int y = Raylib.GetScreenHeight() - Margin - BarHeight - 28;
-        Raylib.DrawText($"side {player.ActiveSide}: {text}", Margin, y, 20,
+        // 1-based, matching the shop - two numbering schemes for the same
+        // sides is a needless translation step for the player.
+        Raylib.DrawText($"side {player.ActiveSide + 1}: {text}", Margin, y, 20,
             active.IsEmpty ? Color.Gray : Color.Orange);
     }
 }

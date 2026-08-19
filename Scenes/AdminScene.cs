@@ -32,6 +32,7 @@ public class AdminScene : IScene
     private double _statusUntil;
 
     private int _draggingField = -1;
+    private bool _confirmingExit;
 
     public void Init(AssetManager assets, GameSettings settings)
     {
@@ -49,14 +50,9 @@ public class AdminScene : IScene
 
     public void Update(float deltaTime)
     {
-        if (Raylib.IsKeyPressed(KeyboardKey.Escape))
-            EventRaised?.Invoke(GameEvent.MainMenuRequested);
+        if (Raylib.IsKeyPressed(KeyboardKey.Escape)) TryLeave();
 
-        if (Raylib.IsKeyPressed(KeyboardKey.Tab))
-        {
-            _activeTab = (_activeTab + 1) % _docs.Count;
-            _scroll = 0f;
-        }
+        if (Raylib.IsKeyPressed(KeyboardKey.Tab)) SwitchTab((_activeTab + 1) % _docs.Count);
 
         // Ctrl+S is the reflex, so support it alongside the button.
         if (Raylib.IsKeyDown(KeyboardKey.LeftControl) && Raylib.IsKeyPressed(KeyboardKey.S))
@@ -66,11 +62,48 @@ public class AdminScene : IScene
         _scroll = MathF.Max(0f, _scroll);
     }
 
+    /// <summary>
+    /// Tab switching keeps unsaved edits: the document holds them in memory, so
+    /// nothing is lost by looking at another file. The drag must be released
+    /// though - keeping the index would apply the next drag to whichever field
+    /// happens to sit at that position in the new tab.
+    /// </summary>
+    private void SwitchTab(int index)
+    {
+        _activeTab = index;
+        _scroll = 0f;
+        _draggingField = -1;
+    }
+
+    /// <summary>
+    /// Leaving with unsaved edits needs confirming. This scene exists to make
+    /// those edits, so discarding a session's worth on one keypress is the
+    /// worst thing it could do silently.
+    /// </summary>
+    private void TryLeave()
+    {
+        if (!AnyDirty() || _confirmingExit)
+        {
+            EventRaised?.Invoke(GameEvent.MainMenuRequested);
+            return;
+        }
+
+        _confirmingExit = true;
+        Flash("Unsaved changes - Ctrl+S to save, ESC again to discard");
+    }
+
+    private bool AnyDirty()
+    {
+        foreach (ConfigDocument doc in _docs) if (doc.IsDirty) return true;
+        return false;
+    }
+
     private void SaveActive()
     {
-        Flash(Active.Save()
-            ? $"Saved {Active.FileName}"
-            : $"Could not save {Active.FileName}");
+        bool saved = Active.Save();
+        if (saved) _confirmingExit = false;
+
+        Flash(saved ? $"Saved {Active.FileName}" : $"Could not save {Active.FileName}");
     }
 
     private void Flash(string message)
@@ -126,7 +159,7 @@ public class AdminScene : IScene
             Raylib.DrawRectangleRec(tab, active ? new Color(232, 238, 248, 255) : new Color(240, 240, 245, 255));
             Raylib.DrawRectangleLinesEx(tab, 1.5f, active ? Accent : new Color(216, 216, 224, 255));
 
-            if (MenuUi.Clicked(tab)) { _activeTab = i; _scroll = 0f; }
+            if (MenuUi.Clicked(tab)) SwitchTab(i);
 
             Raylib.DrawText(label, x + 13, y + 10, 17,
                 doc.IsDirty ? Dirty : active ? Accent : Muted);

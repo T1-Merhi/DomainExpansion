@@ -212,7 +212,7 @@ public sealed class Player
         ActiveSide = ((ActiveSide + delta) % SideCount + SideCount) % SideCount;
     }
 
-    /// <summary>Normalises to (-pi, pi].</summary>
+    /// <summary>Normalises to [-pi, pi] - IEEERemainder is symmetric about zero.</summary>
     public static float WrapAngle(float radians)
     {
         radians = MathF.IEEERemainder(radians, MathF.Tau);
