@@ -28,6 +28,9 @@ public sealed class Player
     /// </summary>
     public readonly Mount[] Mounts = new Mount[MaxSides];
 
+    /// <summary>Player-wide upgrade levels: max health, move speed, shape.</summary>
+    public readonly UpgradeLevels Levels = new();
+
     /// <summary>
     /// Current HP. Kept as a plain field rather than a stat, because it is
     /// state that changes constantly; MaxHealth is the upgradeable stat.

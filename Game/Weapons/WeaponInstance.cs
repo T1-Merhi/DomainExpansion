@@ -46,15 +46,19 @@ public sealed class Mount
 {
     public WeaponInstance Weapon;
 
-    public int DamageLevel;
-    public int FireRateLevel;
+    /// <summary>Upgrade levels for the weapon fitted here, keyed by upgrade id.</summary>
+    public readonly UpgradeLevels Levels = new();
 
     public bool IsEmpty => Weapon == null;
 
+    /// <summary>
+    /// Fitting a weapon resets this mount's upgrade levels, since the new
+    /// weapon has its own base stats and a fresh StatBlock - carrying levels
+    /// across would apply modifiers that were never paid for on this weapon.
+    /// </summary>
     public void Equip(WeaponDef def)
     {
         Weapon = def == null ? null : new WeaponInstance(def);
-        DamageLevel = 0;
-        FireRateLevel = 0;
+        Levels.Clear();
     }
 }
