@@ -1,6 +1,6 @@
 public class MainMenuScene : IScene
 {
-    public event Action<GameEvent>? EventRaised;
+    public event Action<GameEvent> EventRaised;
 
     private static readonly string[] MainOptions = ["Play", "Settings", "Quit"];
     private const float VolumeStep = 0.1f;

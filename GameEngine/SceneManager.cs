@@ -1,12 +1,12 @@
 ﻿public class SceneManager
 {
-    private IScene? _currentScene;
+    private IScene _currentScene;
     private GameEvent? _pendingEvent;
     private readonly AssetManager _assets;
     private readonly GameSettings _settings;
 
     // Not a scene transition, so it's surfaced separately for the engine to act on.
-    public event Action? QuitRequested;
+    public event Action QuitRequested;
 
     public SceneManager(AssetManager assets, GameSettings settings)
     {

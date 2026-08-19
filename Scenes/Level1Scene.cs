@@ -1,6 +1,6 @@
 public class Level1Scene : IScene
 {
-    public event Action<GameEvent>? EventRaised;
+    public event Action<GameEvent> EventRaised;
 
     private AssetManager _assets;
     private GameSettings _settings;
