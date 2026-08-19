@@ -76,6 +76,16 @@ public sealed class Player
         HitFlashTicks = HitFlashDuration;
     }
 
+    /// <summary>Ticks of muzzle flash left on the active barrel.</summary>
+    public int MuzzleFlashTicks;
+
+    public const int MuzzleFlashDuration = 4;
+
+    public void TickMuzzleFlash()
+    {
+        if (MuzzleFlashTicks > 0) MuzzleFlashTicks--;
+    }
+
     public void TickHitFlash()
     {
         if (HitFlashTicks > 0) HitFlashTicks--;

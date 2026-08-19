@@ -10,12 +10,44 @@ public sealed class WorldRenderer
 
     public void Draw(World world, int stepsLastFrame)
     {
+        // Shake is applied to the whole world layer via a camera offset, so it
+        // never touches entity positions and cannot affect collision. The HUD
+        // draws outside this block and therefore stays perfectly still.
+        var camera = new Camera2D
+        {
+            Target = Vector2.Zero,
+            Offset = ShakeOffset(world),
+            Rotation = 0f,
+            Zoom = 1f,
+        };
+
+        Raylib.BeginMode2D(camera);
+
         DrawExplosions(world);
         DrawEnemies(world);
         DrawBullets(world);
         DrawPlayer(world.Player);
         DrawFloatingTexts(world);
+
+        Raylib.EndMode2D();
+
         if (ShowDebug) DrawDebugOverlay(world, stepsLastFrame);
+    }
+
+    /// <summary>
+    /// Pseudo-random offset that changes every frame, so the shake reads as a
+    /// jolt rather than a smooth slide.
+    /// </summary>
+    private static Vector2 ShakeOffset(World world)
+    {
+        float amount = world.ShakeAmount;
+        if (amount <= 0f) return Vector2.Zero;
+
+        double t = Raylib.GetTime() * 60.0;
+
+        return new Vector2(
+            (float)Math.Sin(t * 12.9898) * amount,
+            (float)Math.Cos(t * 7.233) * amount);
     }
 
     private void DrawFloatingTexts(World world)
@@ -73,7 +105,7 @@ public sealed class WorldRenderer
     /// The offset alternates each tick, which reads as a shudder rather than
     /// a slide.
     /// </summary>
-    private static Vector2 ShakeOffset(Enemy enemy)
+    private static Vector2 HitShakeOffset(Enemy enemy)
     {
         if (enemy.HitShakeTicks <= 0) return Vector2.Zero;
 
@@ -126,7 +158,7 @@ public sealed class WorldRenderer
         for (int i = 0; i < world.Enemies.ActiveCount; i++)
         {
             Enemy e = world.Enemies[i];
-            Vector2 at = e.Position + ShakeOffset(e);
+            Vector2 at = e.Position + HitShakeOffset(e);
 
             // Shape and colour per the spec: red square, purple diamond,
             // orange pentagon - so type is identifiable at a glance.
@@ -223,8 +255,18 @@ public sealed class WorldRenderer
 
         // Barrel stub on the active side, showing where shots will originate.
         Vector2 muzzle = player.SideMidpoint(player.ActiveSide);
-        Raylib.DrawLineEx(muzzle, muzzle + player.SideNormal(player.ActiveSide) * 10f,
-            PrimaryThickness + 1f, activeColor);
+        Vector2 normal = player.SideNormal(player.ActiveSide);
+
+        Raylib.DrawLineEx(muzzle, muzzle + normal * 10f, PrimaryThickness + 1f, activeColor);
+
+        if (player.MuzzleFlashTicks > 0)
+        {
+            float strength = player.MuzzleFlashTicks / (float)Player.MuzzleFlashDuration;
+            Vector2 tip = muzzle + normal * 12f;
+
+            Raylib.DrawCircleV(tip, 4f + 7f * strength,
+                new Color(255, 236, 170, (int)(220 * strength)));
+        }
 
         DrawMountCore(player, activeColor);
 

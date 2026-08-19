@@ -29,6 +29,10 @@ public class MainMenuScene : IScene
     private int _selected;
     private bool _draggingSlider;
 
+    // Reloaded on entry rather than cached, so returning from a run that set a
+    // new high score shows it immediately.
+    private Leaderboard _leaderboard;
+
     public void Init(AssetManager assets, GameSettings settings)
     {
         _assets = assets;
@@ -36,6 +40,7 @@ public class MainMenuScene : IScene
         _page = Page.Main;
         _selected = 0;
         _draggingSlider = false;
+        _leaderboard = Leaderboard.Load();
     }
 
     // --- Layout ---------------------------------------------------------
@@ -165,6 +170,12 @@ public class MainMenuScene : IScene
             if (MenuUi.Button(row, MainOptions[i], _selected == i))
                 Activate(i);
         }
+
+        // Below the buttons, so it never competes with them for attention.
+        int boardY = FirstRowY(MainOptions.Length) + MainOptions.Length * (RowHeight + RowGap) + 30;
+
+        MenuUi.CentredText("TOP 5", CentreX, boardY, 18, MenuUi.TextDim);
+        LeaderboardTable.Draw(_leaderboard, CentreX, boardY + 28);
 
         MenuUi.CentredText("Arrow keys or mouse - Enter or click to select",
             CentreX, Raylib.GetScreenHeight() - 48, 18, MenuUi.TextDim);
