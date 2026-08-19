@@ -14,7 +14,31 @@ public sealed class WorldRenderer
         DrawEnemies(world);
         DrawBullets(world);
         DrawPlayer(world.Player);
+        DrawDamageNumbers(world);
         if (ShowDebug) DrawDebugOverlay(world, stepsLastFrame);
+    }
+
+    private void DrawDamageNumbers(World world)
+    {
+        for (int i = 0; i < world.DamageNumbers.ActiveCount; i++)
+        {
+            DamageNumber d = world.DamageNumbers[i];
+
+            float t = d.Progress;
+
+            // Hold full opacity for the first half, then fade - fading from the
+            // start makes small numbers unreadable before they register.
+            byte alpha = t < 0.5f ? (byte)255 : (byte)(255 * (1f - (t - 0.5f) * 2f));
+
+            string text = MathF.Round(d.Amount).ToString("0");
+            int size = 18;
+            int w = Raylib.MeasureText(text, size);
+
+            var shadow = new Color(0, 0, 0, (int)(alpha * 0.45f));
+            Raylib.DrawText(text, (int)d.Position.X - w / 2 + 1, (int)d.Position.Y + 1, size, shadow);
+            Raylib.DrawText(text, (int)d.Position.X - w / 2, (int)d.Position.Y, size,
+                new Color(255, 240, 120, (int)alpha));
+        }
     }
 
     private void DrawExplosions(World world)
@@ -27,7 +51,9 @@ public sealed class WorldRenderer
             // event rather than a static disc.
             float t = e.Progress;
             float radius = e.Radius * (0.4f + 0.6f * t);
-            var color = new Color(255, 140, 40, (int)(200 * (1f - t)));
+
+            Color color = FromPacked(e.Tint);
+            color.A = (byte)(200 * (1f - t));
 
             Raylib.DrawCircleV(e.Position, radius, color);
         }
@@ -51,6 +77,24 @@ public sealed class WorldRenderer
         float sign = (enemy.HitShakeTicks & 1) == 0 ? 1f : -1f;
 
         return new Vector2(sign * amplitude, sign * amplitude * 0.55f);
+    }
+
+    /// <summary>
+    /// Blends the enemy's colour toward white for the first few ticks after a
+    /// hit. Shorter than the shake, so the flash reads as the impact itself
+    /// while the shake carries the reaction.
+    /// </summary>
+    private static Color HitFlash(Enemy enemy, Color baseColor)
+    {
+        const int FlashTicks = 3;
+
+        if (enemy.HitShakeTicks <= Enemy.HitShakeDuration - FlashTicks) return baseColor;
+
+        return new Color(
+            (int)(baseColor.R + (255 - baseColor.R) * 0.75f),
+            (int)(baseColor.G + (255 - baseColor.G) * 0.75f),
+            (int)(baseColor.B + (255 - baseColor.B) * 0.75f),
+            (int)baseColor.A);
     }
 
     /// <summary>
@@ -84,15 +128,15 @@ public sealed class WorldRenderer
                     Raylib.DrawRectangleV(
                         at - new Vector2(e.Radius, e.Radius),
                         new Vector2(e.Radius * 2f, e.Radius * 2f),
-                        Color.Red);
+                        HitFlash(e, Color.Red));
                     break;
 
                 case EnemyType.Shooter:
-                    Raylib.DrawPoly(at, 4, e.Radius, 0f, Color.Purple);
+                    Raylib.DrawPoly(at, 4, e.Radius, 0f, HitFlash(e, Color.Purple));
                     break;
 
                 case EnemyType.Spawner:
-                    Raylib.DrawPoly(at, 5, e.Radius, 0f, Color.Orange);
+                    Raylib.DrawPoly(at, 5, e.Radius, 0f, HitFlash(e, Color.Orange));
                     DrawSpawnTelegraph(at, e);
                     break;
             }
@@ -163,5 +207,6 @@ public sealed class WorldRenderer
         Raylib.DrawText($"bullets {world.PlayerBullets.ActiveCount}/{world.PlayerBullets.Capacity}", 340, y + 22, 18, Color.Gray);
         Raylib.DrawText($"enemies {world.Enemies.ActiveCount}/{world.Enemies.Capacity}", 560, y, 18, Color.Gray);
         Raylib.DrawText($"enemy shots {world.EnemyBullets.ActiveCount}", 560, y + 22, 18, Color.Gray);
+        Raylib.DrawText($"dmg numbers {world.DamageNumbers.ActiveCount}/{world.DamageNumbers.Capacity}", 760, y, 18, Color.Gray);
     }
 }
