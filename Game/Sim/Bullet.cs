@@ -11,6 +11,13 @@ public sealed class Bullet : IPoolable
     /// <summary>Area damage on impact; zero means a direct hit only.</summary>
     public float ExplosionRadius;
 
+    /// <summary>
+    /// Packed RGBA supplied by whatever fired this. Opaque to the simulation,
+    /// which never inspects it - it exists so the renderer can colour a bullet
+    /// by its source weapon without the sim depending on a colour type.
+    /// </summary>
+    public uint Tint;
+
     public void Reset()
     {
         Position = Vector2.Zero;
@@ -19,6 +26,7 @@ public sealed class Bullet : IPoolable
         Radius = 0f;
         LifeTicks = 0;
         ExplosionRadius = 0f;
+        Tint = 0xFFFFFFFF;
     }
 
     public void Step()

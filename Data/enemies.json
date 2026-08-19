@@ -6,7 +6,7 @@
       "radius": 14,
       "stats": {
         "MaxHealth": 20,
-        "MoveSpeed": 90,
+        "MoveSpeed": 52,
         "ContactDamage": 18,
         "ProximityRadius": 18,
         "ExplosionRadius": 100,
@@ -19,10 +19,10 @@
       "radius": 16,
       "stats": {
         "MaxHealth": 30,
-        "MoveSpeed": 70,
+        "MoveSpeed": 42,
         "Damage": 10,
         "FireRate": 0.6,
-        "BulletSpeed": 320,
+        "BulletSpeed": 240,
         "BulletLifetime": 4.0,
         "StandoffDistance": 300,
         "CoinValue": 6,
@@ -34,7 +34,7 @@
       "radius": 22,
       "stats": {
         "MaxHealth": 90,
-        "MoveSpeed": 40,
+        "MoveSpeed": 24,
         "SpawnInterval": 4.0,
         "SpawnCount": 2,
         "StandoffDistance": 420,

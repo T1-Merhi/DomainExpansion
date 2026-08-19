@@ -33,11 +33,32 @@ public sealed class WorldRenderer
         }
     }
 
+    /// <summary>
+    /// Hit reaction: a decaying jitter applied at draw time only, so the shake
+    /// never moves the enemy's actual position and cannot affect collision.
+    /// The offset alternates each tick, which reads as a shudder rather than
+    /// a slide.
+    /// </summary>
+    private static Vector2 ShakeOffset(Enemy enemy)
+    {
+        if (enemy.HitShakeTicks <= 0) return Vector2.Zero;
+
+        float decay = enemy.HitShakeTicks / (float)Enemy.HitShakeDuration;
+        float amplitude = 4.5f * decay;
+
+        // Flip direction on alternate ticks; the second axis uses a different
+        // multiplier so it does not shake along a single diagonal.
+        float sign = (enemy.HitShakeTicks & 1) == 0 ? 1f : -1f;
+
+        return new Vector2(sign * amplitude, sign * amplitude * 0.55f);
+    }
+
     private void DrawEnemies(World world)
     {
         for (int i = 0; i < world.Enemies.ActiveCount; i++)
         {
             Enemy e = world.Enemies[i];
+            Vector2 at = e.Position + ShakeOffset(e);
 
             // Shape and colour per the spec: red square, purple diamond,
             // orange pentagon - so type is identifiable at a glance.
@@ -45,39 +66,45 @@ public sealed class WorldRenderer
             {
                 case EnemyType.Chaser:
                     Raylib.DrawRectangleV(
-                        e.Position - new Vector2(e.Radius, e.Radius),
+                        at - new Vector2(e.Radius, e.Radius),
                         new Vector2(e.Radius * 2f, e.Radius * 2f),
                         Color.Red);
                     break;
 
                 case EnemyType.Shooter:
-                    Raylib.DrawPoly(e.Position, 4, e.Radius, 0f, Color.Purple);
+                    Raylib.DrawPoly(at, 4, e.Radius, 0f, Color.Purple);
                     break;
 
                 case EnemyType.Spawner:
-                    Raylib.DrawPoly(e.Position, 5, e.Radius, 0f, Color.Orange);
+                    Raylib.DrawPoly(at, 5, e.Radius, 0f, Color.Orange);
                     break;
             }
         }
     }
 
+    /// <summary>Unpacks the sim's opaque RGBA value into a drawable colour.</summary>
+    private static Color FromPacked(uint tint) => new(
+        (int)((tint >> 24) & 0xFF),
+        (int)((tint >> 16) & 0xFF),
+        (int)((tint >> 8) & 0xFF),
+        (int)(tint & 0xFF));
+
     private void DrawBullets(World world)
     {
+        // Colour comes from the weapon that fired it, so weapon type is
+        // identifiable from the projectiles alone.
         for (int i = 0; i < world.PlayerBullets.ActiveCount; i++)
         {
             Bullet b = world.PlayerBullets[i];
-
-            // Explosive rounds read differently so the pistol is identifiable.
-            Color color = b.ExplosionRadius > 0f ? Color.Red : Color.DarkBlue;
-            Raylib.DrawCircleV(b.Position, b.Radius, color);
+            Raylib.DrawCircleV(b.Position, b.Radius, FromPacked(b.Tint));
         }
 
-        // Enemy fire is drawn as an outlined ring so it never reads as the
-        // player's own bullets in a crowded screen.
+        // Enemy fire keeps an outlined ring so it never reads as the player's
+        // own bullets in a crowded screen, regardless of tint.
         for (int i = 0; i < world.EnemyBullets.ActiveCount; i++)
         {
             Bullet b = world.EnemyBullets[i];
-            Raylib.DrawCircleV(b.Position, b.Radius, Color.Purple);
+            Raylib.DrawCircleV(b.Position, b.Radius, FromPacked(b.Tint));
             Raylib.DrawCircleLinesV(b.Position, b.Radius + 2f, Color.Magenta);
         }
     }
@@ -102,20 +129,10 @@ public sealed class WorldRenderer
 
         // Barrel stub on the active side, showing where shots will originate.
         Vector2 muzzle = player.SideMidpoint(player.ActiveSide);
-        Raylib.DrawLineEx(muzzle, muzzle + player.SideNormal(player.ActiveSide) * 14f,
+        Raylib.DrawLineEx(muzzle, muzzle + player.SideNormal(player.ActiveSide) * 9f,
             PrimaryThickness, Color.Orange);
 
-        // Side index just inside each edge, so the carousel is readable.
-        for (int i = 0; i < n; i++)
-        {
-            Vector2 label = player.Position + (player.SideMidpoint(i) - player.Position) * 0.55f;
-            string text = i.ToString();
-            int w = Raylib.MeasureText(text, 14);
-            Raylib.DrawText(text, (int)label.X - w / 2, (int)label.Y - 7, 14,
-                i == player.ActiveSide ? Color.Orange : Color.Gray);
-        }
-
-        Raylib.DrawCircleV(player.Position, 3f, Color.DarkBlue);
+        Raylib.DrawCircleV(player.Position, 2f, Color.DarkBlue);
     }
 
     private void DrawDebugOverlay(World world, int stepsLastFrame)

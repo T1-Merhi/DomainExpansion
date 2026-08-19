@@ -15,7 +15,7 @@ public sealed class Player
 
     public Vector2 Position;
     public float Rotation;          // radians, angle of vertex 0
-    public float Radius = 34f;      // circumradius
+    public float Radius = 21f;      // circumradius
     public int SideCount = 3;       // triangle
     public int ActiveSide;          // #15 drives this with the mouse wheel
 
