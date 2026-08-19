@@ -4,7 +4,7 @@
 /// </summary>
 public sealed class Explosion : IPoolable
 {
-    public const int LifeTicks = 12;
+    public static int LifeTicks => Tuning.Effects.ExplosionTicks;
 
     public Vector2 Position;
     public float Radius;

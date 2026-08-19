@@ -12,7 +12,8 @@
         "ExplosionRadius": 100,
         "CoinValue": 3,
         "ScoreValue": 10
-      }
+      },
+      "tint": "E03131"
     },
     {
       "type": "Shooter",
@@ -27,7 +28,8 @@
         "StandoffDistance": 300,
         "CoinValue": 6,
         "ScoreValue": 25
-      }
+      },
+      "tint": "9B45C9"
     },
     {
       "type": "Spawner",
@@ -40,7 +42,8 @@
         "StandoffDistance": 420,
         "CoinValue": 20,
         "ScoreValue": 100
-      }
+      },
+      "tint": "F08C1E"
     }
   ]
 }

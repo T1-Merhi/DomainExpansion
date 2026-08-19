@@ -1,0 +1,11 @@
+{
+  "radius": 21,
+  "moveSpeed": 260,
+  "maxHealth": 100,
+  "turnResponse": 0.35,
+  "hitFlashTicks": 15,
+  "muzzleFlashTicks": 4,
+  "maxSides": 12,
+  "bulletRadius": 4,
+  "enemyBulletRadius": 5
+}

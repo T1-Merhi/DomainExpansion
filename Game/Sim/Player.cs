@@ -11,11 +11,12 @@
 /// </summary>
 public sealed class Player
 {
-    public const int MaxSides = 12;
+    public static int MaxSides => Tuning.Player.MaxSides;
+    public const int MaxSidesCeiling = 24;
 
     public Vector2 Position;
     public float Rotation;          // radians, angle of vertex 0
-    public float Radius = 21f;      // circumradius
+    public float Radius = Tuning.Player.Radius;   // circumradius
     public int SideCount = 3;       // triangle
     public int ActiveSide;          // #15 drives this with the mouse wheel
 
@@ -26,7 +27,7 @@ public sealed class Player
     /// upgrade only raises SideCount - mounts beyond it keep their contents,
     /// which matters if we ever allow shrinking.
     /// </summary>
-    public readonly Mount[] Mounts = new Mount[MaxSides];
+    public readonly Mount[] Mounts = new Mount[MaxSidesCeiling];
 
     /// <summary>Player-wide upgrade levels: max health, move speed, shape.</summary>
     public readonly UpgradeLevels Levels = new();
@@ -45,14 +46,14 @@ public sealed class Player
     /// </summary>
     public int HitFlashTicks;
 
-    public const int HitFlashDuration = 15;
+    public static int HitFlashDuration => Tuning.Player.HitFlashTicks;
 
     public Player()
     {
-        for (int i = 0; i < MaxSides; i++) Mounts[i] = new Mount();
+        for (int i = 0; i < MaxSidesCeiling; i++) Mounts[i] = new Mount();
 
-        Stats.SetBase(StatId.MoveSpeed, 260f);
-        Stats.SetBase(StatId.MaxHealth, 100f);
+        Stats.SetBase(StatId.MoveSpeed, Tuning.Player.MoveSpeed);
+        Stats.SetBase(StatId.MaxHealth, Tuning.Player.MaxHealth);
 
         Health = MaxHealth;
     }
@@ -79,7 +80,7 @@ public sealed class Player
     /// <summary>Ticks of muzzle flash left on the active barrel.</summary>
     public int MuzzleFlashTicks;
 
-    public const int MuzzleFlashDuration = 4;
+    public static int MuzzleFlashDuration => Tuning.Player.MuzzleFlashTicks;
 
     public void TickMuzzleFlash()
     {
@@ -165,7 +166,7 @@ public sealed class Player
     public float TargetRotation { get; private set; }
 
     /// <summary>Fraction of the remaining angle closed per tick.</summary>
-    public float TurnResponse = 0.35f;
+    public float TurnResponse = Tuning.Player.TurnResponse;
 
     /// <summary>Sets the target rotation so the active side's normal points at the cursor.</summary>
     public void AimAt(Vector2 target)

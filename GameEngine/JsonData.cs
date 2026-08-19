@@ -1,11 +1,12 @@
 /// <summary>
-/// Loads JSON definition files from the Data folder next to the executable.
-/// Paths resolve against AppContext.BaseDirectory, not the working directory,
-/// so the game behaves the same whether launched via `dotnet run` or directly.
+/// JSON loading for config files.
+///
+/// Reads resolve against the shared config folder (see ConfigPaths), not the
+/// build output, so every instance sees the same data.
 /// </summary>
 public static class JsonData
 {
-    private static readonly JsonSerializerOptions Options = new()
+    public static readonly JsonSerializerOptions Options = new()
     {
         PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
@@ -16,8 +17,7 @@ public static class JsonData
         Converters = { new JsonStringEnumConverter(allowIntegerValues: true) },
     };
 
-    public static string PathFor(string fileName) =>
-        Path.Combine(AppContext.BaseDirectory, "Data", fileName);
+    public static string PathFor(string fileName) => ConfigPaths.PathFor(fileName);
 
     /// <summary>
     /// Returns a default-constructed T rather than throwing when the file is
@@ -26,16 +26,17 @@ public static class JsonData
     public static T Load<T>(string fileName) where T : new()
     {
         string path = PathFor(fileName);
+        string json = ConfigPaths.ReadWithRetry(path);
 
-        if (!File.Exists(path))
+        if (json == null)
         {
-            Console.WriteLine($"Data: '{fileName}' not found at {path}");
+            Console.WriteLine($"Data: '{fileName}' not readable at {path}");
             return new T();
         }
 
         try
         {
-            return JsonSerializer.Deserialize<T>(File.ReadAllText(path), Options) ?? new T();
+            return JsonSerializer.Deserialize<T>(json, Options) ?? new T();
         }
         catch (JsonException ex)
         {

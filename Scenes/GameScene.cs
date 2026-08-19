@@ -40,6 +40,10 @@ public class GameScene : IScene
         _assets = assets;
         _settings = settings;
 
+        // Re-read config from the shared folder on every run start, so an
+        // admin instance's saved edits take effect on restart with no relaunch.
+        ConfigStore.Current.Reload();
+
         _world = new World(ScreenSize());
         _renderer = new WorldRenderer();
         _hud = new HudRenderer();

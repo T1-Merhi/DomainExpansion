@@ -13,7 +13,7 @@ public enum FloatingTextKind
 /// </summary>
 public sealed class FloatingText : IPoolable
 {
-    public const int LifeTicks = 42;
+    public static int LifeTicks => Tuning.Effects.FloatingTextTicks;
 
     public Vector2 Position;
     public Vector2 Velocity;
@@ -38,7 +38,7 @@ public sealed class FloatingText : IPoolable
         Position += Velocity * World.FixedStep;
 
         // Slow as it rises, so the text settles where it can be read.
-        Velocity *= 0.94f;
+        Velocity *= Tuning.Effects.FloatingTextDamping;
         TicksLeft--;
     }
 }

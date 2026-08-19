@@ -19,7 +19,12 @@
 
     private void Initialize()
     {
-        Raylib.InitWindow(Settings.Width, Settings.Height, "Domain Expansion");
+        // Config must exist before anything reads Tuning, which Player does in
+        // its field initialisers.
+        ConfigStore.Current.Reload();
+
+        Raylib.InitWindow(Settings.Width, Settings.Height,
+            AppMode.IsAdmin ? "Domain Expansion - ADMIN" : "Domain Expansion");
 
         // Apply after the window exists, so the framebuffer is resized to the
         // monitor rather than stretched from the windowed size.

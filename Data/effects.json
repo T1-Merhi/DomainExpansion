@@ -1,0 +1,17 @@
+{
+  "hitShakeTicks": 7,
+  "explosionTicks": 12,
+  "floatingTextTicks": 42,
+  "floatingTextDamping": 0.94,
+  "floatingTextRiseSpeed": 70,
+
+  "spawnerTelegraphTicks": 36,
+  "chaserShare": 0.7,
+  "shooterBandHalfWidth": 40,
+  "spawnerBandHalfWidth": 60,
+  "spawnRingRadius": 34,
+
+  "shakeCap": 14,
+  "shakeDecay": 0.86,
+  "shakeOnPlayerHit": 4
+}

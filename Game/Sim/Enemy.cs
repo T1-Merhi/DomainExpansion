@@ -27,7 +27,7 @@ public sealed class Enemy : IPoolable
     /// <summary>Ticks of hit-reaction shake left. Purely cosmetic.</summary>
     public int HitShakeTicks;
 
-    public const int HitShakeDuration = 7;
+    public static int HitShakeDuration => Tuning.Effects.HitShakeTicks;
 
     /// <summary>Set when the enemy should be removed after behaviours have run.</summary>
     public bool PendingRemoval;

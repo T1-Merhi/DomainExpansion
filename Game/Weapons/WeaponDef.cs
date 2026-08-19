@@ -51,30 +51,12 @@ public sealed class WeaponDef
         {
             if (!_tintParsed)
             {
-                _packedTint = ParseTint(Tint);
+                _packedTint = ColorHex.Parse(Tint);
                 _tintParsed = true;
             }
 
             return _packedTint;
         }
-    }
-
-    private static uint ParseTint(string value)
-    {
-        const uint fallback = 0xFFFFFFFFu; // opaque white
-
-        if (string.IsNullOrWhiteSpace(value)) return fallback;
-
-        string hex = value.TrimStart('#');
-        if (hex.Length == 6) hex += "FF";
-        if (hex.Length != 8) return fallback;
-
-        return uint.TryParse(hex,
-            System.Globalization.NumberStyles.HexNumber,
-            System.Globalization.CultureInfo.InvariantCulture,
-            out uint parsed)
-            ? parsed
-            : fallback;
     }
 }
 
