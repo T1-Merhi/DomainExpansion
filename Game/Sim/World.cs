@@ -175,6 +175,7 @@ public sealed class World
 
         Player.AimAt(Input.MousePosition);
         Player.StepRotation();
+        Player.TickHitFlash();
 
         TickWeapons();
         StepBullets();
@@ -218,9 +219,16 @@ public sealed class World
         }
     }
 
-    /// <summary>Area damage falling off linearly to zero at the rim.</summary>
+    /// <summary>
+    /// Area damage falling off linearly to zero at the rim, with the blast
+    /// visual. Spawning it here rather than at the call sites means every
+    /// explosive impact is visible - previously the damage was applied with
+    /// nothing drawn, so pistol rounds exploded invisibly.
+    /// </summary>
     private void ApplyExplosion(Vector2 centre, float radius, float damage)
     {
+        AddExplosion(centre, radius);
+
         _grid.QueryCircle(centre, radius, index =>
         {
             Enemy e = Enemies[index];
