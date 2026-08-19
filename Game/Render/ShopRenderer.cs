@@ -174,15 +174,80 @@ public sealed class ShopRenderer
 
         if (mount.IsEmpty)
         {
-            Raylib.DrawText("No weapon fitted.", x, y, 18, Muted);
-            Raylib.DrawText("Equipping arrives in #30.", x, y + 26, 16, Muted);
+            DrawWeaponPicker(world, shop, x, y, panel);
             return;
         }
 
         DrawUpgradeRow(world, shop, world.UpgradeDefs.Find("damage"), x, y, panel);
         DrawUpgradeRow(world, shop, world.UpgradeDefs.Find("firerate"), x, y + RowHeight, panel);
 
-        DrawCurrentStats(mount, x, y + RowHeight * 2 + 10);
+        DrawCurrentStats(mount, x, y + RowHeight * 2 + 6);
+        DrawWeaponPicker(world, shop, x, y + RowHeight * 2 + 34, panel);
+    }
+
+    /// <summary>
+    /// Weapon list built from the loaded catalogue, so a weapon added to
+    /// weapons.json is purchasable with no code change here.
+    /// </summary>
+    private void DrawWeaponPicker(World world, Shop shop, int x, int y, Rectangle panel)
+    {
+        UpgradeDef equip = world.UpgradeDefs.Find("equip");
+        if (equip == null) return;
+
+        Mount mount = world.Player.Mounts[SelectedSide];
+        int right = (int)(panel.X + panel.Width) - 30;
+
+        string heading = mount.IsEmpty ? "FIT A WEAPON" : "REPLACE WEAPON";
+        Raylib.DrawText(heading, x, y, 15, Muted);
+
+        int cost = shop.CostOf(equip, SelectedSide);
+        int rowY = y + 24;
+
+        foreach (WeaponDef def in world.Weapons.Weapons)
+        {
+            bool isFitted = !mount.IsEmpty && mount.Weapon.Def.Id == def.Id;
+            bool affordable = world.Coins >= cost;
+            bool clickable = !isFitted && affordable;
+
+            var row = new Rectangle(x - 8, rowY - 4, right - x + 16, 28);
+            bool hovered = MenuUi.IsHovered(row);
+
+            if (hovered && clickable)
+            {
+                Raylib.DrawRectangleRec(row, new Color(236, 240, 232, 255));
+                Raylib.DrawRectangleLinesEx(row, 1.5f, new Color(120, 170, 110, 255));
+            }
+
+            if (clickable && MenuUi.Clicked(row)) shop.BuyEquip(equip, SelectedSide, def);
+
+            // Colour swatch, matching the bullet and turret colour for this weapon.
+            Raylib.DrawRectangleRec(new Rectangle(x, rowY + 2, 12f, 12f), TintOf(def));
+
+            Raylib.DrawText(def.Name, x + 22, rowY, 17,
+                isFitted ? Muted : clickable ? Ink : Disabled);
+
+            string trailing = isFitted ? "fitted" : $"{cost}c";
+            int tw = Raylib.MeasureText(trailing, 15);
+            Raylib.DrawText(trailing, right - tw, rowY + 1, 15,
+                isFitted ? Muted : affordable ? Gold : Disabled);
+
+            rowY += 30;
+        }
+
+        if (!mount.IsEmpty)
+        {
+            Raylib.DrawText("Replacing resets this side's upgrade levels.", x, rowY + 2, 14, Muted);
+        }
+    }
+
+    private static Color TintOf(WeaponDef def)
+    {
+        uint t = def.PackedTint;
+        return new Color(
+            (int)((t >> 24) & 0xFF),
+            (int)((t >> 16) & 0xFF),
+            (int)((t >> 8) & 0xFF),
+            255);
     }
 
     /// <summary>
