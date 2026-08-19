@@ -16,20 +16,33 @@ public sealed class HudRenderer
         DrawCurrency(world);
     }
 
-    /// <summary>Coins top-right, where it does not compete with the health bar.</summary>
+    /// <summary>
+    /// Score and coins top-right. Kept visually distinct - score in neutral
+    /// grey, coins in gold - because one is spent and the other never is, and
+    /// confusing them would make purchase decisions read wrongly.
+    /// </summary>
     private void DrawCurrency(World world)
     {
-        string coins = $"{world.Coins}";
-        int size = 24;
-        int w = Raylib.MeasureText(coins, size);
-        int x = Raylib.GetScreenWidth() - Margin - w;
+        int right = Raylib.GetScreenWidth() - Margin;
 
-        Raylib.DrawText(coins, x, Margin, size, new Color(214, 168, 40, 255));
+        int y = DrawRightAligned($"{world.Score}", "SCORE", right, Margin,
+            28, new Color(60, 60, 70, 255));
 
-        const string label = "COINS";
-        int lw = Raylib.MeasureText(label, 14);
-        Raylib.DrawText(label, Raylib.GetScreenWidth() - Margin - lw, Margin + size + 2, 14,
-            new Color(150, 150, 160, 255));
+        DrawRightAligned($"{world.Coins}", "COINS", right, y + 10,
+            24, new Color(214, 168, 40, 255));
+    }
+
+    /// <summary>Draws a right-aligned value with a caption; returns the y below it.</summary>
+    private static int DrawRightAligned(string value, string caption, int right, int y, int size, Color color)
+    {
+        int vw = Raylib.MeasureText(value, size);
+        Raylib.DrawText(value, right - vw, y, size, color);
+
+        const int captionSize = 13;
+        int cw = Raylib.MeasureText(caption, captionSize);
+        Raylib.DrawText(caption, right - cw, y + size + 1, captionSize, new Color(150, 150, 160, 255));
+
+        return y + size + captionSize + 2;
     }
 
     /// <summary>

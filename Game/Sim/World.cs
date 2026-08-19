@@ -31,6 +31,13 @@ public sealed class World
     /// <summary>Spendable currency, earned by killing enemies.</summary>
     public int Coins { get; private set; }
 
+    /// <summary>
+    /// Leaderboard currency. Accumulates for the whole run and is never spent,
+    /// so buying upgrades cannot reduce it - that separation is the entire
+    /// reason it is not just Coins.
+    /// </summary>
+    public int Score { get; private set; }
+
     public void AddCoins(int amount)
     {
         if (amount > 0) Coins += amount;
@@ -150,6 +157,9 @@ public sealed class World
     /// </summary>
     private void AwardKill(Enemy enemy)
     {
+        int score = enemy.Stats.GetInt(StatId.ScoreValue);
+        if (score > 0) Score += score;
+
         int coins = enemy.Stats.GetInt(StatId.CoinValue);
         if (coins <= 0) return;
 
