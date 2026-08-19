@@ -8,8 +8,8 @@
         "MaxHealth": 20,
         "MoveSpeed": 90,
         "ContactDamage": 18,
-        "ProximityRadius": 46,
-        "ExplosionRadius": 70,
+        "ProximityRadius": 18,
+        "ExplosionRadius": 100,
         "CoinValue": 3,
         "ScoreValue": 10
       }
