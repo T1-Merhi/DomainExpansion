@@ -27,6 +27,35 @@ public sealed class World
 
     public readonly Pool<Explosion> Explosions = new(64);
 
+    /// <summary>
+    /// Separate from PlayerBullets so the two never test against each other -
+    /// player and enemy projectiles pass through one another by construction
+    /// rather than by a filter check in the collision loop.
+    /// </summary>
+    public readonly Pool<Bullet> EnemyBullets = new(256);
+
+    public void SpawnEnemyBullet(Vector2 position, Vector2 velocity, float damage, float lifetime)
+    {
+        Bullet b = EnemyBullets.Rent();
+        b.Position = position;
+        b.Velocity = velocity;
+        b.Damage = damage;
+        b.Radius = 5f;
+        b.LifeTicks = Math.Max(1, (int)(lifetime * TickRate));
+        b.ExplosionRadius = 0f;
+    }
+
+    private void StepEnemyBullets()
+    {
+        for (int i = EnemyBullets.ActiveCount - 1; i >= 0; i--)
+        {
+            Bullet b = EnemyBullets[i];
+            b.Step();
+
+            if (b.Expired(ArenaSize)) EnemyBullets.ReturnAt(i);
+        }
+    }
+
     private readonly SpatialGrid _grid = new();
 
     public void AddExplosion(Vector2 position, float radius)
@@ -93,6 +122,7 @@ public sealed class World
 
         TickWeapons();
         StepBullets();
+        StepEnemyBullets();
         TickEnemies();
 
         _grid.Rebuild(Enemies);

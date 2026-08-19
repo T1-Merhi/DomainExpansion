@@ -75,11 +75,55 @@ public sealed class ChaserBehavior : IEnemyBehavior
     }
 }
 
-/// <summary>Placeholder until #20.</summary>
+/// <summary>
+/// Purple diamond. Holds a standoff band around the player and fires on a slow
+/// cadence. Advances when too far, retreats when too close, and holds still in
+/// between - the deadband is what stops it oscillating on the threshold.
+/// </summary>
 public sealed class ShooterBehavior : IEnemyBehavior
 {
+    /// <summary>Half-width of the band it will sit still inside, in world units.</summary>
+    private const float BandHalfWidth = 40f;
+
     public void Tick(Enemy enemy, World world)
     {
+        Player player = world.Player;
+
+        Vector2 toPlayer = player.Position - enemy.Position;
+        float distance = toPlayer.Length();
+        if (distance < 0.001f) return;
+
+        Vector2 direction = toPlayer / distance;
+
+        float standoff = enemy.Stats.Get(StatId.StandoffDistance);
+        float speed = enemy.Stats.Get(StatId.MoveSpeed);
+
+        if (distance > standoff + BandHalfWidth) enemy.Velocity = direction * speed;
+        else if (distance < standoff - BandHalfWidth) enemy.Velocity = -direction * speed;
+        else enemy.Velocity = Vector2.Zero;
+
+        TickFiring(enemy, world, direction);
+    }
+
+    private static void TickFiring(Enemy enemy, World world, Vector2 direction)
+    {
+        if (enemy.ActionCooldown > 0)
+        {
+            enemy.ActionCooldown--;
+            return;
+        }
+
+        float rate = enemy.Stats.Get(StatId.FireRate);
+        if (rate <= 0f) return;
+
+        world.SpawnEnemyBullet(
+            enemy.Position + direction * enemy.Radius,
+            direction * enemy.Stats.Get(StatId.BulletSpeed),
+            enemy.Stats.Get(StatId.Damage),
+            enemy.Stats.Get(StatId.BulletLifetime));
+
+        // Whole ticks, so cadence is exact under the fixed timestep.
+        enemy.ActionCooldown = Math.Max(1, (int)MathF.Round(World.TickRate / rate));
     }
 }
 
