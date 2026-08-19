@@ -10,8 +10,21 @@ public sealed class WorldRenderer
 
     public void Draw(World world, int stepsLastFrame)
     {
+        DrawBullets(world);
         DrawPlayer(world.Player);
         if (ShowDebug) DrawDebugOverlay(world, stepsLastFrame);
+    }
+
+    private void DrawBullets(World world)
+    {
+        for (int i = 0; i < world.PlayerBullets.ActiveCount; i++)
+        {
+            Bullet b = world.PlayerBullets[i];
+
+            // Explosive rounds read differently so the pistol is identifiable.
+            Color color = b.ExplosionRadius > 0f ? Color.Red : Color.DarkBlue;
+            Raylib.DrawCircleV(b.Position, b.Radius, color);
+        }
     }
 
     private void DrawPlayer(Player player)
@@ -48,5 +61,6 @@ public sealed class WorldRenderer
         Raylib.DrawText($"sim {(world.TickCount / (double)World.TickRate):F1}s", 200, y, 18, Color.Gray);
         Raylib.DrawText($"fps {Raylib.GetFPS()}", 200, y + 22, 18, Color.Gray);
         Raylib.DrawText($"sides {world.Player.SideCount}  active {world.Player.ActiveSide}", 340, y, 18, Color.Gray);
+        Raylib.DrawText($"bullets {world.PlayerBullets.ActiveCount}/{world.PlayerBullets.Capacity}", 340, y + 22, 18, Color.Gray);
     }
 }
