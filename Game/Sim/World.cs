@@ -127,6 +127,7 @@ public sealed class World
 
         _grid.Rebuild(Enemies);
         ResolveBulletHits();
+        ResolveEnemyBulletHits();
         ResolveEnemyContact();
 
         StepExplosions();
@@ -173,6 +174,25 @@ public sealed class World
             float falloff = 1f - MathF.Max(0f, distance) / radius;
             e.TakeDamage(damage * falloff);
         });
+    }
+
+    /// <summary>
+    /// Enemy fire tests only against the player. No enemy pool lookup and no
+    /// owner filtering, because the two bullet pools are already disjoint.
+    /// </summary>
+    private void ResolveEnemyBulletHits()
+    {
+        if (Player.IsDead) return;
+
+        for (int i = EnemyBullets.ActiveCount - 1; i >= 0; i--)
+        {
+            Bullet b = EnemyBullets[i];
+
+            if (!Collision.CirclesOverlap(b.Position, b.Radius, Player.Position, Player.Radius)) continue;
+
+            Player.TakeDamage(b.Damage);
+            EnemyBullets.ReturnAt(i);
+        }
     }
 
     private void ResolveEnemyContact()
