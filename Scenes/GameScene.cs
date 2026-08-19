@@ -83,6 +83,9 @@ public class GameScene : IScene
         if (Raylib.IsKeyPressed(KeyboardKey.F3))
             _renderer.ShowDebug = !_renderer.ShowDebug;
 
+        // Debug weapon swap on the active mount until #30 makes it a purchase.
+        if (Raylib.IsKeyPressed(KeyboardKey.E)) CycleActiveWeapon();
+
         // Debug shape switching until #29 makes it a purchase.
         for (int sides = 3; sides <= 8; sides++)
         {
@@ -94,10 +97,34 @@ public class GameScene : IScene
         }
     }
 
+    private void CycleActiveWeapon()
+    {
+        var defs = _world.Weapons.Weapons;
+        if (defs.Count == 0) return;
+
+        Mount mount = _world.Player.ActiveMount;
+
+        int next = 0;
+        if (!mount.IsEmpty)
+        {
+            for (int i = 0; i < defs.Count; i++)
+            {
+                if (defs[i].Id == mount.Weapon.Def.Id) { next = (i + 1) % defs.Count; break; }
+            }
+        }
+
+        mount.Equip(defs[next]);
+    }
+
     public void Draw()
     {
         Raylib.DrawText("GAME", 20, 30, 26, Color.DarkBlue);
-        Raylib.DrawText("3-8 = shape   K = die   ESC = menu   F3 = debug", 20, 66, 18, Color.DarkGray);
+        Raylib.DrawText("WASD move   LMB fire   E weapon   3-8 shape   K die   ESC menu   F3 debug",
+            20, 66, 18, Color.DarkGray);
+
+        Mount active = _world.Player.ActiveMount;
+        Raylib.DrawText(active.IsEmpty ? "(empty mount)" : active.Weapon.Name,
+            20, 92, 20, active.IsEmpty ? Color.Gray : Color.Orange);
 
         _renderer.Draw(_world, _stepsLastFrame);
     }

@@ -19,6 +19,7 @@ public sealed class World
     public InputState Input;
 
     public readonly WeaponCatalog Weapons = WeaponCatalog.Load();
+    public readonly Pool<Bullet> PlayerBullets = new(512);
 
     public World(Vector2 arenaSize)
     {
@@ -37,5 +38,70 @@ public sealed class World
 
         Player.Move(Input.MoveAxis, ArenaSize);
         Player.AimAt(Input.MousePosition);
+
+        TickWeapons();
+        StepBullets();
+    }
+
+    private void TickWeapons()
+    {
+        for (int i = 0; i < Player.SideCount; i++)
+        {
+            Player.Mounts[i].Weapon?.TickCooldown();
+        }
+
+        if (!Input.FireHeld) return;
+
+        Mount mount = Player.ActiveMount;
+        if (mount.IsEmpty || !mount.Weapon.IsReady) return;
+
+        FireMount(Player.ActiveSide, mount.Weapon);
+        mount.Weapon.StartCooldown();
+    }
+
+    private void FireMount(int side, WeaponInstance weapon)
+    {
+        Vector2 origin = Player.SideMidpoint(side);
+        float aim = Player.SideNormalAngle(side);
+
+        int count = Math.Max(1, weapon.Stats.GetInt(StatId.ProjectileCount));
+        float spreadDeg = weapon.Stats.Get(StatId.Spread);
+        float speed = weapon.Stats.Get(StatId.BulletSpeed);
+        float damage = weapon.Stats.Get(StatId.Damage);
+        float lifetime = weapon.Stats.Get(StatId.BulletLifetime);
+        float explosion = weapon.Def.OnHit == OnHit.Explode
+            ? weapon.Stats.Get(StatId.ExplosionRadius)
+            : 0f;
+
+        for (int i = 0; i < count; i++)
+        {
+            // Fan the pellets evenly across the spread arc rather than
+            // randomly, so a shotgun pattern is readable and consistent.
+            float offset = count == 1
+                ? 0f
+                : (i / (float)(count - 1) - 0.5f) * spreadDeg * MathF.PI / 180f;
+
+            float angle = aim + offset;
+
+            Bullet b = PlayerBullets.Rent();
+            b.Position = origin;
+            b.Velocity = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * speed;
+            b.Damage = damage;
+            b.Radius = 4f;
+            b.LifeTicks = Math.Max(1, (int)(lifetime * TickRate));
+            b.ExplosionRadius = explosion;
+        }
+    }
+
+    private void StepBullets()
+    {
+        // Backwards: ReturnAt swaps the last active item into the freed slot.
+        for (int i = PlayerBullets.ActiveCount - 1; i >= 0; i--)
+        {
+            Bullet b = PlayerBullets[i];
+            b.Step();
+
+            if (b.Expired(ArenaSize)) PlayerBullets.ReturnAt(i);
+        }
     }
 }
