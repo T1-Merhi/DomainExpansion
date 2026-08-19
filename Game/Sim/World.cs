@@ -26,7 +26,24 @@ public sealed class World
     public readonly Pool<Enemy> Enemies = new(256);
 
     public readonly Pool<Explosion> Explosions = new(64);
-    public readonly Pool<DamageNumber> DamageNumbers = new(256);
+    public readonly Pool<FloatingText> FloatingTexts = new(256);
+
+    /// <summary>Spendable currency, earned by killing enemies.</summary>
+    public int Coins { get; private set; }
+
+    public void AddCoins(int amount)
+    {
+        if (amount > 0) Coins += amount;
+    }
+
+    /// <summary>Returns false and changes nothing when the player cannot afford it.</summary>
+    public bool TrySpendCoins(int amount)
+    {
+        if (amount < 0 || Coins < amount) return false;
+
+        Coins -= amount;
+        return true;
+    }
 
     /// <summary>
     /// Separate from PlayerBullets so the two never test against each other -
@@ -86,25 +103,26 @@ public sealed class World
     /// randomised horizontal nudge so repeated hits on one target fan out
     /// instead of stacking into an unreadable pile.
     /// </summary>
-    public void AddDamageNumber(Vector2 position, float amount)
+    public void AddFloatingText(Vector2 position, float amount, FloatingTextKind kind)
     {
         if (amount <= 0f) return;
 
-        DamageNumber d = DamageNumbers.Rent();
-        d.Position = position;
-        d.Velocity = new Vector2(NextFloat(-26f, 26f), -70f);
-        d.Amount = amount;
-        d.TicksLeft = DamageNumber.LifeTicks;
+        FloatingText t = FloatingTexts.Rent();
+        t.Position = position;
+        t.Velocity = new Vector2(NextFloat(-26f, 26f), -70f);
+        t.Amount = amount;
+        t.TicksLeft = FloatingText.LifeTicks;
+        t.Kind = kind;
     }
 
-    private void StepDamageNumbers()
+    private void StepFloatingTexts()
     {
-        for (int i = DamageNumbers.ActiveCount - 1; i >= 0; i--)
+        for (int i = FloatingTexts.ActiveCount - 1; i >= 0; i--)
         {
-            DamageNumber d = DamageNumbers[i];
-            d.Step();
+            FloatingText t = FloatingTexts[i];
+            t.Step();
 
-            if (d.TicksLeft <= 0) DamageNumbers.ReturnAt(i);
+            if (t.TicksLeft <= 0) FloatingTexts.ReturnAt(i);
         }
     }
 
@@ -117,9 +135,29 @@ public sealed class World
         if (amount <= 0f || enemy.IsDead) return;
 
         enemy.TakeDamage(amount);
-        AddDamageNumber(enemy.Position, amount);
+        AddFloatingText(enemy.Position, amount, FloatingTextKind.Damage);
 
-        if (enemy.IsDead) AddExplosion(enemy.Position, enemy.Radius * 1.6f, DeathBurstTint);
+        if (!enemy.IsDead) return;
+
+        AddExplosion(enemy.Position, enemy.Radius * 1.6f, DeathBurstTint);
+        AwardKill(enemy);
+    }
+
+    /// <summary>
+    /// Paid only from DamageEnemy, so a chaser that consumes itself by
+    /// detonating awards nothing - it sets PendingRemoval rather than dying
+    /// from damage, and suiciding into the player must not fund the player.
+    /// </summary>
+    private void AwardKill(Enemy enemy)
+    {
+        int coins = enemy.Stats.GetInt(StatId.CoinValue);
+        if (coins <= 0) return;
+
+        AddCoins(coins);
+
+        // Offset upward so it does not sit under the damage number from the
+        // killing blow, which spawns at the same instant and position.
+        AddFloatingText(enemy.Position - new Vector2(0f, 18f), coins, FloatingTextKind.Coin);
     }
 
     private void StepExplosions()
@@ -189,7 +227,7 @@ public sealed class World
         ResolveEnemyContact();
 
         StepExplosions();
-        StepDamageNumbers();
+        StepFloatingTexts();
         SweepDeadEnemies();
     }
 

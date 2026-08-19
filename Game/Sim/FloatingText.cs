@@ -1,8 +1,17 @@
+public enum FloatingTextKind
+{
+    Damage,
+    Coin,
+}
+
 /// <summary>
-/// Floating damage readout. Pooled like everything else, because sustained
-/// fire against a crowd produces these faster than anything else in the game.
+/// Short-lived readout that drifts upward from a world position. Pooled, since
+/// sustained fire into a crowd produces these faster than anything else.
+///
+/// Damage and coin pickups share one pool: they have identical motion and
+/// lifetime, and only differ in how the renderer styles them.
 /// </summary>
-public sealed class DamageNumber : IPoolable
+public sealed class FloatingText : IPoolable
 {
     public const int LifeTicks = 42;
 
@@ -10,6 +19,7 @@ public sealed class DamageNumber : IPoolable
     public Vector2 Velocity;
     public float Amount;
     public int TicksLeft;
+    public FloatingTextKind Kind;
 
     public void Reset()
     {
@@ -17,6 +27,7 @@ public sealed class DamageNumber : IPoolable
         Velocity = Vector2.Zero;
         Amount = 0f;
         TicksLeft = 0;
+        Kind = FloatingTextKind.Damage;
     }
 
     /// <summary>0 at spawn, 1 when finished.</summary>
@@ -26,7 +37,7 @@ public sealed class DamageNumber : IPoolable
     {
         Position += Velocity * World.FixedStep;
 
-        // Slow as it rises, so the number settles where it can be read.
+        // Slow as it rises, so the text settles where it can be read.
         Velocity *= 0.94f;
         TicksLeft--;
     }
