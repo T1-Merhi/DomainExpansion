@@ -21,10 +21,20 @@ public sealed class Player
 
     public readonly StatBlock Stats = new();
 
+    /// <summary>
+    /// One per potential side. Allocated to MaxSides up front so a shape
+    /// upgrade only raises SideCount - mounts beyond it keep their contents,
+    /// which matters if we ever allow shrinking.
+    /// </summary>
+    public readonly Mount[] Mounts = new Mount[MaxSides];
+
     public Player()
     {
+        for (int i = 0; i < MaxSides; i++) Mounts[i] = new Mount();
         Stats.SetBase(StatId.MoveSpeed, 260f);
     }
+
+    public Mount ActiveMount => Mounts[ActiveSide];
 
     /// <summary>
     /// Applies the movement axis for one tick. The axis is normalised by the

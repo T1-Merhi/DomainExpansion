@@ -18,10 +18,15 @@ public sealed class World
     /// <summary>Latest input snapshot, written by the scene before ticking.</summary>
     public InputState Input;
 
+    public readonly WeaponCatalog Weapons = WeaponCatalog.Load();
+
     public World(Vector2 arenaSize)
     {
         ArenaSize = arenaSize;
         Player.Position = arenaSize * 0.5f;
+
+        // The triangle starts with one weapon on its primary side.
+        Player.Mounts[0].Equip(Weapons.Find("rifle"));
     }
 
     public void Resize(Vector2 arenaSize) => ArenaSize = arenaSize;
