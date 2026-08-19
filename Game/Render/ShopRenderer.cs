@@ -34,6 +34,7 @@ public sealed class ShopRenderer
         DrawHeader(world, panel);
         DrawSideList(world, panel, shop);
         DrawDetail(world, panel, shop);
+        DrawFooter(world, panel, shop);
         DrawFooterHint(panel);
     }
 
@@ -254,6 +255,68 @@ public sealed class ShopRenderer
             var seg = new Rectangle(x + i * segWidth, y, segWidth - 3f, 8f);
             Raylib.DrawRectangleRec(seg, i < level ? Gold : new Color(224, 224, 230, 255));
         }
+    }
+
+    /// <summary>
+    /// Purchases that affect the whole run rather than one mount: another side,
+    /// more max health, and a repair. Kept along the bottom so they read as
+    /// global, not as part of the selected side's detail.
+    /// </summary>
+    private void DrawFooter(World world, Rectangle panel, Shop shop)
+    {
+        int y = (int)(panel.Y + panel.Height) - 84;
+        float width = (panel.Width - 60) / 3f;
+
+        DrawFooterButton(world, shop, world.UpgradeDefs.Find("shape"),
+            new Rectangle(panel.X + 24, y, width - 10, 42),
+            ShapeLabel(world.Player));
+
+        // Max health and repair join this row in #31.
+    }
+
+    /// <summary>Names the shape being bought, so the cost has something concrete attached.</summary>
+    private static string ShapeLabel(Player player)
+    {
+        string next = player.SideCount switch
+        {
+            3 => "Square",
+            4 => "Pentagon",
+            5 => "Hexagon",
+            6 => "Heptagon",
+            7 => "Octagon",
+            _ => $"{player.SideCount + 1} sides",
+        };
+
+        return player.SideCount >= Player.MaxSides ? "Max sides" : $"Add Side ({next})";
+    }
+
+    private void DrawFooterButton(World world, Shop shop, UpgradeDef def, Rectangle rect, string labelOverride)
+    {
+        if (def == null) return;
+
+        bool buyable = shop.CanBuy(def, SelectedSide);
+        bool maxed = shop.IsMaxed(def, SelectedSide);
+        bool hovered = MenuUi.IsHovered(rect);
+
+        Raylib.DrawRectangleRec(rect, buyable && hovered
+            ? new Color(236, 240, 232, 255)
+            : new Color(238, 238, 244, 255));
+
+        Raylib.DrawRectangleLinesEx(rect, 1.5f,
+            buyable ? new Color(120, 170, 110, 255) : new Color(214, 214, 222, 255));
+
+        if (buyable && MenuUi.Clicked(rect)) shop.Buy(def, SelectedSide);
+
+        string label = labelOverride ?? def.Name;
+        Raylib.DrawText(label, (int)rect.X + 12, (int)rect.Y + 7, 17,
+            buyable ? Ink : Muted);
+
+        int level = shop.LevelOf(def, SelectedSide);
+        string cost = maxed ? "MAX" : $"{def.CostFor(level)}c";
+        int cw = Raylib.MeasureText(cost, 16);
+
+        Raylib.DrawText(cost, (int)(rect.X + rect.Width) - 12 - cw, (int)rect.Y + 22, 16,
+            maxed ? Muted : buyable ? Gold : Disabled);
     }
 
     private static void DrawFooterHint(Rectangle panel)
