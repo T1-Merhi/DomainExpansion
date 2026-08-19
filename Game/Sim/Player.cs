@@ -21,6 +21,29 @@ public sealed class Player
 
     public readonly StatBlock Stats = new();
 
+    public Player()
+    {
+        Stats.SetBase(StatId.MoveSpeed, 260f);
+    }
+
+    /// <summary>
+    /// Applies the movement axis for one tick. The axis is normalised by the
+    /// caller, so diagonals are not faster than cardinals, and speed is per
+    /// second rather than per tick so stat values read naturally.
+    /// </summary>
+    public void Move(Vector2 axis, Vector2 arenaSize)
+    {
+        if (axis.LengthSquared() > 0f)
+        {
+            Position += axis * Stats.Get(StatId.MoveSpeed) * World.FixedStep;
+        }
+
+        // Keep the whole polygon inside the arena, not just its centre.
+        Position = new Vector2(
+            Math.Clamp(Position.X, Radius, arenaSize.X - Radius),
+            Math.Clamp(Position.Y, Radius, arenaSize.Y - Radius));
+    }
+
     /// <summary>Centre-to-side-midpoint distance.</summary>
     public float Apothem => Radius * MathF.Cos(MathF.PI / SideCount);
 
