@@ -53,11 +53,10 @@
 
         IScene nextScene = gameEvent switch
         {
-            GameEvent.PlayRequested => new Level1Scene(),
+            GameEvent.PlayRequested => new GameScene(),
+            GameEvent.RestartRequested => new GameScene(),
             GameEvent.MainMenuRequested => new MainMenuScene(),
-            GameEvent.Level1Completed => new Level2Scene(),
-            GameEvent.Level2Completed => new MainMenuScene(),
-            GameEvent.PlayerDied => new Level1Scene(),
+            GameEvent.PlayerDied => new DeathScene(),
             _ => throw new ArgumentOutOfRangeException(nameof(gameEvent), gameEvent, null),
         };
 
