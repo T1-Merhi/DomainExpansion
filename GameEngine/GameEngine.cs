@@ -23,6 +23,10 @@
         if (Settings.IsFullScreen) Raylib.ToggleFullscreen();
         Raylib.SetTargetFPS(Settings.TargetFPS);
 
+        // Scenes bind ESC themselves (back to menu), so stop Raylib closing the
+        // window on it. Quitting goes through the main menu or the window button.
+        Raylib.SetExitKey(KeyboardKey.Null);
+
         Raylib.InitAudioDevice();
 
         Assets = new AssetManager(Settings);
