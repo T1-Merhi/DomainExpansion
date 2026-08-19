@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "upgrades": [
+    {
+      "id": "damage",
+      "name": "Damage",
+      "kind": "MountStat",
+      "stat": "Damage",
+      "op": "Add",
+      "valuePerLevel": 3,
+      "maxLevel": 20,
+      "costBase": 40,
+      "costGrowth": 1.35
+    },
+    {
+      "id": "firerate",
+      "name": "Fire Rate",
+      "kind": "MountStat",
+      "stat": "FireRate",
+      "op": "Mult",
+      "valuePerLevel": 0.12,
+      "maxLevel": 15,
+      "costBase": 55,
+      "costGrowth": 1.4
+    },
+    {
+      "id": "maxhealth",
+      "name": "Max Health",
+      "kind": "PlayerStat",
+      "stat": "MaxHealth",
+      "op": "Add",
+      "valuePerLevel": 20,
+      "maxLevel": 12,
+      "costBase": 120,
+      "costGrowth": 1.5
+    },
+    {
+      "id": "movespeed",
+      "name": "Move Speed",
+      "kind": "PlayerStat",
+      "stat": "MoveSpeed",
+      "op": "Mult",
+      "valuePerLevel": 0.08,
+      "maxLevel": 10,
+      "costBase": 90,
+      "costGrowth": 1.45
+    },
+    {
+      "id": "shape",
+      "name": "Add Side",
+      "kind": "Shape",
+      "maxLevel": 9,
+      "costBase": 250,
+      "costGrowth": 1.8,
+      "costOverrides": {
+        "0": 250
+      }
+    },
+    {
+      "id": "repair",
+      "name": "Repair",
+      "kind": "Repair",
+      "valuePerLevel": 40,
+      "costBase": 60,
+      "costGrowth": 1.0
+    },
+    {
+      "id": "equip",
+      "name": "Equip Weapon",
+      "kind": "EquipWeapon",
+      "costBase": 150,
+      "costGrowth": 1.0
+    }
+  ]
+}

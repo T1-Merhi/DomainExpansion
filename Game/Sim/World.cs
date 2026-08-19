@@ -20,6 +20,7 @@ public sealed class World
 
     public readonly WeaponCatalog Weapons = WeaponCatalog.Load();
     public readonly EnemyCatalog EnemyDefs = EnemyCatalog.Load();
+    public readonly UpgradeCatalog UpgradeDefs = UpgradeCatalog.Load();
     public readonly EnemyBehaviors Behaviors = new();
 
     public readonly Pool<Bullet> PlayerBullets = new(512);
