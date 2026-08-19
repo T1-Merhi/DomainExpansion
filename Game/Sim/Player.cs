@@ -173,6 +173,19 @@ public sealed class Player
     /// <summary>Snaps instantly - used when the shape changes and easing would look wrong.</summary>
     public void SnapRotation() => Rotation = TargetRotation;
 
+    /// <summary>
+    /// Grows the polygon by one side. The new mount is empty rather than
+    /// locked - per the design, sides are never locked, only unfilled - and
+    /// existing mounts keep their weapons and levels untouched.
+    /// </summary>
+    public bool AddSide()
+    {
+        if (SideCount >= MaxSides) return false;
+
+        SideCount++;
+        return true;
+    }
+
     /// <summary>Selects a side by offset, wrapping around the polygon.</summary>
     public void CycleActiveSide(int delta)
     {
