@@ -29,7 +29,8 @@ public class DeathScene : IScene
         MenuUi.CentredText("YOU DIED", centreX, y, 46, Color.Maroon);
 
         MenuUi.CentredText($"Score  {RunResult.Score}", centreX, y + 90, 28, MenuUi.Text);
-        MenuUi.CentredText($"Coins earned  {RunResult.Coins}", centreX, y + 128, 22, MenuUi.TextDim);
+        MenuUi.CentredText($"Reached wave {RunResult.Wave}", centreX, y + 128, 22, MenuUi.TextDim);
+        MenuUi.CentredText($"Coins earned  {RunResult.Coins}", centreX, y + 158, 20, MenuUi.TextDim);
 
         MenuUi.CentredText("SPACE = restart      ESC = main menu",
             centreX, Raylib.GetScreenHeight() - 60, 18, MenuUi.TextDim);

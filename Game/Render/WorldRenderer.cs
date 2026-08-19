@@ -279,6 +279,8 @@ public sealed class WorldRenderer
         Raylib.DrawText($"bullets {world.PlayerBullets.ActiveCount}/{world.PlayerBullets.Capacity}", 340, y + 22, 18, Color.Gray);
         Raylib.DrawText($"enemies {world.Enemies.ActiveCount}/{world.Enemies.Capacity}", 560, y, 18, Color.Gray);
         Raylib.DrawText($"enemy shots {world.EnemyBullets.ActiveCount}", 560, y + 22, 18, Color.Gray);
+        Raylib.DrawText($"wave {world.WaveNumber} {world.WaveRunner.Phase}  hp x{world.Waves.ScaleOf("MaxHealth", Math.Max(1, world.WaveNumber)):0.00}",
+            760, y + 22, 18, Color.Gray);
         Raylib.DrawText($"floats {world.FloatingTexts.ActiveCount}/{world.FloatingTexts.Capacity}", 760, y, 18, Color.Gray);
     }
 }

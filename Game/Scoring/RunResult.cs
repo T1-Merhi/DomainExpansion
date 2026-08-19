@@ -17,7 +17,7 @@ public static class RunResult
     {
         Score = world.Score;
         Coins = world.Coins;
-        Wave = 0; // #35 supplies the wave the run ended on.
+        Wave = world.WaveNumber;
     }
 
     public static void Clear()

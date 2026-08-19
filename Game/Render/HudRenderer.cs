@@ -14,6 +14,43 @@ public sealed class HudRenderer
         DrawHealthBar(world.Player);
         DrawActiveWeapon(world.Player);
         DrawCurrency(world);
+        DrawWaveStatus(world);
+    }
+
+    /// <summary>
+    /// Wave number top-centre, with the rest countdown beneath it. Centred
+    /// because it is the thing the player looks up for between waves, and the
+    /// corners are already taken by health and currency.
+    /// </summary>
+    private void DrawWaveStatus(World world)
+    {
+        WaveRunner runner = world.WaveRunner;
+        int centreX = Raylib.GetScreenWidth() / 2;
+
+        string wave = runner.WaveNumber <= 0 ? "GET READY" : $"WAVE {runner.WaveNumber}";
+        int ww = Raylib.MeasureText(wave, 26);
+        Raylib.DrawText(wave, centreX - ww / 2, Margin, 26, new Color(60, 60, 70, 255));
+
+        if (runner.Phase == WavePhase.Resting)
+        {
+            // Ceiling, so it reads 20 the instant the rest begins and only
+            // shows 0 when the wave actually starts.
+            int seconds = (int)MathF.Ceiling(runner.RestSecondsRemaining);
+
+            string countdown = $"next wave in {seconds}s   -   ENTER to start now";
+            int cw = Raylib.MeasureText(countdown, 17);
+            Raylib.DrawText(countdown, centreX - cw / 2, Margin + 32, 17, new Color(150, 150, 160, 255));
+        }
+        else
+        {
+            int remaining = runner.RemainingToSpawn;
+            string status = remaining > 0
+                ? $"{world.Enemies.ActiveCount} active   {remaining} incoming"
+                : $"{world.Enemies.ActiveCount} remaining";
+
+            int sw = Raylib.MeasureText(status, 17);
+            Raylib.DrawText(status, centreX - sw / 2, Margin + 32, 17, new Color(150, 150, 160, 255));
+        }
     }
 
     /// <summary>
