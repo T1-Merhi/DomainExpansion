@@ -10,8 +10,20 @@ public sealed class World
 
     public long TickCount { get; private set; }
 
+    public readonly Player Player = new();
+
+    /// <summary>Latest input snapshot, written by the scene before ticking.</summary>
+    public InputState Input;
+
+    public World(Vector2 playerStart)
+    {
+        Player.Position = playerStart;
+    }
+
     public void Tick()
     {
         TickCount++;
+
+        Player.AimAt(Input.MousePosition);
     }
 }

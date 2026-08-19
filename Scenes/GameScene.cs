@@ -19,7 +19,8 @@ public class GameScene : IScene
         _assets = assets;
         _settings = settings;
 
-        _world = new World();
+        var centre = new Vector2(Raylib.GetScreenWidth() * 0.5f, Raylib.GetScreenHeight() * 0.5f);
+        _world = new World(centre);
         _renderer = new WorldRenderer();
         _accumulator = 0f;
         _stepsLastFrame = 0;
@@ -28,6 +29,8 @@ public class GameScene : IScene
     public void Update(float deltaTime)
     {
         HandleSceneInput();
+
+        _world.Input = ReadInput();
 
         _accumulator += deltaTime;
 
@@ -45,6 +48,16 @@ public class GameScene : IScene
         _stepsLastFrame = steps;
     }
 
+    private static InputState ReadInput()
+    {
+        return new InputState
+        {
+            MousePosition = Raylib.GetMousePosition(),
+            FireHeld = Raylib.IsMouseButtonDown(MouseButton.Left),
+            WheelDelta = (int)Raylib.GetMouseWheelMove(),
+        };
+    }
+
     private void HandleSceneInput()
     {
         // Debug stand-in until #16 wires real player death.
@@ -56,12 +69,22 @@ public class GameScene : IScene
 
         if (Raylib.IsKeyPressed(KeyboardKey.F3))
             _renderer.ShowDebug = !_renderer.ShowDebug;
+
+        // Debug shape switching until #29 makes it a purchase.
+        for (int sides = 3; sides <= 8; sides++)
+        {
+            if (Raylib.IsKeyPressed(KeyboardKey.Zero + sides))
+            {
+                _world.Player.SideCount = sides;
+                if (_world.Player.ActiveSide >= sides) _world.Player.ActiveSide = 0;
+            }
+        }
     }
 
     public void Draw()
     {
-        Raylib.DrawText("GAME", 20, 40, 30, Color.DarkBlue);
-        Raylib.DrawText("K = simulate death (debug)   ESC = main menu   F3 = debug overlay", 20, 90, 18, Color.DarkGray);
+        Raylib.DrawText("GAME", 20, 30, 26, Color.DarkBlue);
+        Raylib.DrawText("3-8 = shape   K = die   ESC = menu   F3 = debug", 20, 66, 18, Color.DarkGray);
 
         _renderer.Draw(_world, _stepsLastFrame);
     }
