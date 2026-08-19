@@ -26,6 +26,7 @@ public sealed class World
     public readonly Pool<Enemy> Enemies = new(256);
 
     public readonly Pool<Explosion> Explosions = new(64);
+    public readonly Pool<DamageNumber> DamageNumbers = new(256);
 
     /// <summary>
     /// Separate from PlayerBullets so the two never test against each other -
@@ -62,12 +63,63 @@ public sealed class World
 
     private readonly SpatialGrid _grid = new();
 
-    public void AddExplosion(Vector2 position, float radius)
+    /// <summary>Orange blast, used for chaser detonations and explosive rounds.</summary>
+    private const uint BlastTint = 0xFF8C28FFu;
+
+    /// <summary>Pale burst, used when an enemy dies from damage.</summary>
+    private const uint DeathBurstTint = 0xFFE8D0FFu;
+
+    public void AddExplosion(Vector2 position, float radius) =>
+        AddExplosion(position, radius, BlastTint);
+
+    public void AddExplosion(Vector2 position, float radius, uint tint)
     {
         Explosion e = Explosions.Rent();
         e.Position = position;
         e.Radius = radius;
         e.TicksLeft = Explosion.LifeTicks;
+        e.Tint = tint;
+    }
+
+    /// <summary>
+    /// Damage readout at the point of impact. Given a slight upward drift and a
+    /// randomised horizontal nudge so repeated hits on one target fan out
+    /// instead of stacking into an unreadable pile.
+    /// </summary>
+    public void AddDamageNumber(Vector2 position, float amount)
+    {
+        if (amount <= 0f) return;
+
+        DamageNumber d = DamageNumbers.Rent();
+        d.Position = position;
+        d.Velocity = new Vector2(NextFloat(-26f, 26f), -70f);
+        d.Amount = amount;
+        d.TicksLeft = DamageNumber.LifeTicks;
+    }
+
+    private void StepDamageNumbers()
+    {
+        for (int i = DamageNumbers.ActiveCount - 1; i >= 0; i--)
+        {
+            DamageNumber d = DamageNumbers[i];
+            d.Step();
+
+            if (d.TicksLeft <= 0) DamageNumbers.ReturnAt(i);
+        }
+    }
+
+    /// <summary>
+    /// Applies damage and produces the feedback that goes with it, so no caller
+    /// can damage an enemy without the player seeing why it died.
+    /// </summary>
+    private void DamageEnemy(Enemy enemy, float amount)
+    {
+        if (amount <= 0f || enemy.IsDead) return;
+
+        enemy.TakeDamage(amount);
+        AddDamageNumber(enemy.Position, amount);
+
+        if (enemy.IsDead) AddExplosion(enemy.Position, enemy.Radius * 1.6f, DeathBurstTint);
     }
 
     private void StepExplosions()
@@ -136,6 +188,7 @@ public sealed class World
         ResolveEnemyContact();
 
         StepExplosions();
+        StepDamageNumbers();
         SweepDeadEnemies();
     }
 
@@ -159,7 +212,7 @@ public sealed class World
             if (hit < 0) continue;
 
             if (b.ExplosionRadius > 0f) ApplyExplosion(b.Position, b.ExplosionRadius, b.Damage);
-            else Enemies[hit].TakeDamage(b.Damage);
+            else DamageEnemy(Enemies[hit], b.Damage);
 
             PlayerBullets.ReturnAt(i);
         }
@@ -177,7 +230,7 @@ public sealed class World
             if (distance > radius) return;
 
             float falloff = 1f - MathF.Max(0f, distance) / radius;
-            e.TakeDamage(damage * falloff);
+            DamageEnemy(e, damage * falloff);
         });
     }
 
