@@ -224,18 +224,26 @@ public sealed class WorldRenderer
     }
 
     /// <summary>
-    /// The equipment mount at the centre: a small polygon matching the turret's
-    /// shape, filled with the active weapon's colour. Replaces the old plain
-    /// dot, which carried no information.
+    /// The equipped weapon's initial at the turret centre - R, S, P - sized to
+    /// sit inside the polygon. Drawn upright rather than rotating with the
+    /// turret, since a spinning letter is unreadable.
     /// </summary>
     private static void DrawMountCore(Player player, Color color)
     {
-        float rotationDeg = player.Rotation * 180f / MathF.PI;
-        float radius = MathF.Max(4.5f, player.Radius * 0.32f);
+        Mount mount = player.ActiveMount;
+        string glyph = mount.IsEmpty ? "-" : mount.Weapon.Name.Substring(0, 1).ToUpperInvariant();
 
-        Raylib.DrawPoly(player.Position, player.SideCount, radius, rotationDeg, color);
-        Raylib.DrawPolyLines(player.Position, player.SideCount, radius + 1.5f, rotationDeg,
-            new Color(40, 40, 50, 200));
+        // Scale to the turret so it stays fitted if the radius ever changes.
+        int size = (int)Math.Clamp(player.Radius * 0.62f, 10f, 20f);
+
+        int w = Raylib.MeasureText(glyph, size);
+        int x = (int)player.Position.X - w / 2;
+        int y = (int)player.Position.Y - size / 2;
+
+        // Dark offset copy first, so the letter stays legible against bullets
+        // and enemies passing underneath.
+        Raylib.DrawText(glyph, x + 1, y + 1, size, new Color(25, 25, 30, 180));
+        Raylib.DrawText(glyph, x, y, size, color);
     }
 
     /// <summary>
