@@ -6,6 +6,11 @@
         Path.Combine(AppContext.BaseDirectory, "settings.json");
 
     // Display
+    //
+    // Width/Height are the preferred WINDOWED size, not the live framebuffer.
+    // While fullscreen the window matches the monitor and these keep the size
+    // to restore on exit. Use Raylib.GetScreenWidth/Height for actual
+    // dimensions at runtime.
     public int Width { get; set; } = 1280;
     public int Height { get; set; } = 720;
     public bool IsFullScreen { get; set; } = false;
