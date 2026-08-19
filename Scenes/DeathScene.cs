@@ -22,10 +22,17 @@ public class DeathScene : IScene
 
     public void Draw()
     {
-        // #38 replaces this with the score summary and leaderboard.
-        Raylib.DrawText("YOU DIED", 20, 40, 40, Color.Maroon);
-        Raylib.DrawText("SPACE = restart", 20, 110, 20, Color.DarkGray);
-        Raylib.DrawText("ESC = main menu", 20, 140, 20, Color.DarkGray);
+        // #38 replaces this with the full summary and leaderboard.
+        int centreX = Raylib.GetScreenWidth() / 2;
+        int y = Raylib.GetScreenHeight() / 2 - 120;
+
+        MenuUi.CentredText("YOU DIED", centreX, y, 46, Color.Maroon);
+
+        MenuUi.CentredText($"Score  {RunResult.Score}", centreX, y + 90, 28, MenuUi.Text);
+        MenuUi.CentredText($"Coins earned  {RunResult.Coins}", centreX, y + 128, 22, MenuUi.TextDim);
+
+        MenuUi.CentredText("SPACE = restart      ESC = main menu",
+            centreX, Raylib.GetScreenHeight() - 60, 18, MenuUi.TextDim);
     }
 
     public void Unload()

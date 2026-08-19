@@ -63,6 +63,7 @@ public class GameScene : IScene
         if (!_deathRaised && _world.Player.IsDead)
         {
             _deathRaised = true;
+            RunResult.Capture(_world);
             EventRaised?.Invoke(GameEvent.PlayerDied);
         }
 
