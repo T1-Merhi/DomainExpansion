@@ -36,6 +36,14 @@ public sealed class Player
 
     public bool IsDead => Health <= 0f;
 
+    /// <summary>
+    /// Ticks of hit reaction left. Deliberately longer than the enemy shake so
+    /// taking damage reads as a different event from dealing it.
+    /// </summary>
+    public int HitFlashTicks;
+
+    public const int HitFlashDuration = 15;
+
     public Player()
     {
         for (int i = 0; i < MaxSides; i++) Mounts[i] = new Mount();
@@ -62,7 +70,18 @@ public sealed class Player
         if (amount <= 0f || IsDead) return;
 
         Health = MathF.Max(0f, Health - amount);
+        HitFlashTicks = HitFlashDuration;
     }
+
+    public void TickHitFlash()
+    {
+        if (HitFlashTicks > 0) HitFlashTicks--;
+    }
+
+    /// <summary>1 at the moment of impact, decaying to 0.</summary>
+    public float HitFlashStrength => HitFlashTicks <= 0
+        ? 0f
+        : HitFlashTicks / (float)HitFlashDuration;
 
     /// <summary>Never exceeds MaxHealth, so #31's Repair cannot overheal.</summary>
     public void Heal(float amount)

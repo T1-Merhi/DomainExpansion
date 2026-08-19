@@ -10,8 +10,33 @@ public sealed class HudRenderer
 
     public void Draw(World world)
     {
+        DrawHurtVignette(world.Player);
         DrawHealthBar(world.Player);
         DrawActiveWeapon(world.Player);
+    }
+
+    /// <summary>
+    /// Red border pulse when the player takes damage. Screen-space and
+    /// exclusive to the player, so it can never be mistaken for enemy hit
+    /// feedback no matter how busy the arena is.
+    /// </summary>
+    private void DrawHurtVignette(Player player)
+    {
+        float strength = player.HitFlashStrength;
+        if (strength <= 0f) return;
+
+        int w = Raylib.GetScreenWidth();
+        int h = Raylib.GetScreenHeight();
+
+        int band = (int)(26 + 34 * strength);
+        int alpha = (int)(130 * strength);
+        var color = new Color(200, 30, 30, alpha);
+
+        // Gradient bands so the edge fades inward instead of ending on a line.
+        Raylib.DrawRectangleGradientV(0, 0, w, band, color, Color.Blank);
+        Raylib.DrawRectangleGradientV(0, h - band, w, band, Color.Blank, color);
+        Raylib.DrawRectangleGradientH(0, 0, band, h, color, Color.Blank);
+        Raylib.DrawRectangleGradientH(w - band, 0, band, h, Color.Blank, color);
     }
 
     private void DrawHealthBar(Player player)

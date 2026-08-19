@@ -170,30 +170,86 @@ public sealed class WorldRenderer
         }
     }
 
+    private static readonly Color EmptyMountColor = new(150, 150, 160, 255);
+
+    /// <summary>A mount's weapon colour, or grey when the slot is unfilled.</summary>
+    private static Color MountColor(Mount mount) =>
+        mount.IsEmpty ? EmptyMountColor : FromPacked(mount.Weapon.Def.PackedTint);
+
+    /// <summary>Blends toward red while the player is reacting to a hit.</summary>
+    private static Color Hurt(Color color, float strength)
+    {
+        if (strength <= 0f) return color;
+
+        return new Color(
+            (int)(color.R + (230 - color.R) * strength),
+            (int)(color.G * (1f - strength)),
+            (int)(color.B * (1f - strength)),
+            (int)color.A);
+    }
+
     private void DrawPlayer(Player player)
     {
         Span<Vector2> verts = stackalloc Vector2[Player.MaxSides];
         player.GetVertices(verts);
 
         int n = player.SideCount;
+        float hurt = player.HitFlashStrength;
 
+        // Each side is drawn in the colour of the weapon mounted on it, so the
+        // whole loadout is legible from the turret without any UI.
         for (int i = 0; i < n; i++)
         {
             Vector2 a = verts[i];
             Vector2 b = verts[(i + 1) % n];
 
             bool isActive = i == player.ActiveSide;
+
             Raylib.DrawLineEx(a, b,
                 isActive ? PrimaryThickness : OutlineThickness,
-                isActive ? Color.Orange : Color.DarkBlue);
+                Hurt(MountColor(player.Mounts[i]), hurt));
         }
+
+        Mount active = player.ActiveMount;
+        Color activeColor = Hurt(MountColor(active), hurt);
 
         // Barrel stub on the active side, showing where shots will originate.
         Vector2 muzzle = player.SideMidpoint(player.ActiveSide);
-        Raylib.DrawLineEx(muzzle, muzzle + player.SideNormal(player.ActiveSide) * 9f,
-            PrimaryThickness, Color.Orange);
+        Raylib.DrawLineEx(muzzle, muzzle + player.SideNormal(player.ActiveSide) * 10f,
+            PrimaryThickness + 1f, activeColor);
 
-        Raylib.DrawCircleV(player.Position, 2f, Color.DarkBlue);
+        DrawMountCore(player, activeColor);
+
+        if (hurt > 0f) DrawHitRing(player, hurt);
+    }
+
+    /// <summary>
+    /// The equipment mount at the centre: a small polygon matching the turret's
+    /// shape, filled with the active weapon's colour. Replaces the old plain
+    /// dot, which carried no information.
+    /// </summary>
+    private static void DrawMountCore(Player player, Color color)
+    {
+        float rotationDeg = player.Rotation * 180f / MathF.PI;
+        float radius = MathF.Max(4.5f, player.Radius * 0.32f);
+
+        Raylib.DrawPoly(player.Position, player.SideCount, radius, rotationDeg, color);
+        Raylib.DrawPolyLines(player.Position, player.SideCount, radius + 1.5f, rotationDeg,
+            new Color(40, 40, 50, 200));
+    }
+
+    /// <summary>
+    /// Ring expanding outward from the player on damage. Enemies flash white
+    /// and shudder in place; the player flashes red and emits a ring, so the
+    /// two are never confused in a crowded fight.
+    /// </summary>
+    private static void DrawHitRing(Player player, float strength)
+    {
+        float radius = player.Radius + (1f - strength) * 26f;
+        var color = new Color(235, 60, 50, (int)(190 * strength));
+
+        Raylib.DrawCircleLinesV(player.Position, radius, color);
+        Raylib.DrawCircleLinesV(player.Position, radius + 2f, color);
     }
 
     private void DrawDebugOverlay(World world, int stepsLastFrame)
