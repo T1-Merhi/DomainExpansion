@@ -128,5 +128,6 @@ public sealed class WorldRenderer
         Raylib.DrawText($"sides {world.Player.SideCount}  active {world.Player.ActiveSide}", 340, y, 18, Color.Gray);
         Raylib.DrawText($"bullets {world.PlayerBullets.ActiveCount}/{world.PlayerBullets.Capacity}", 340, y + 22, 18, Color.Gray);
         Raylib.DrawText($"enemies {world.Enemies.ActiveCount}/{world.Enemies.Capacity}", 560, y, 18, Color.Gray);
+        Raylib.DrawText($"enemy shots {world.EnemyBullets.ActiveCount}", 560, y + 22, 18, Color.Gray);
     }
 }
