@@ -180,31 +180,68 @@ public sealed class ShopRenderer
 
         DrawUpgradeRow(world, shop, world.UpgradeDefs.Find("damage"), x, y, panel);
         DrawUpgradeRow(world, shop, world.UpgradeDefs.Find("firerate"), x, y + RowHeight, panel);
+
+        DrawCurrentStats(mount, x, y + RowHeight * 2 + 10);
     }
 
     /// <summary>
-    /// One purchasable row: level, cost, and a bar. Interaction is deferred to
-    /// #28 - this establishes the layout only.
+    /// One purchasable row. Clicking anywhere on it buys, so the whole row is
+    /// the target rather than a small button.
     /// </summary>
     private void DrawUpgradeRow(World world, Shop shop, UpgradeDef def, int x, int y, Rectangle panel)
     {
         if (def == null) return;
 
+        int right = (int)(panel.X + panel.Width) - 30;
+        var row = new Rectangle(x - 8, y - 6, right - x + 16, RowHeight - 8);
+
         int level = shop.LevelOf(def, SelectedSide);
         bool maxed = shop.IsMaxed(def, SelectedSide);
         bool affordable = shop.CanAfford(def, SelectedSide);
+        bool buyable = shop.CanBuy(def, SelectedSide);
 
-        Raylib.DrawText(def.Name, x, y, 19, Ink);
+        bool hovered = MenuUi.IsHovered(row);
+
+        if (hovered && buyable)
+        {
+            Raylib.DrawRectangleRec(row, new Color(236, 240, 232, 255));
+            Raylib.DrawRectangleLinesEx(row, 1.5f, new Color(120, 170, 110, 255));
+        }
+        else if (hovered)
+        {
+            Raylib.DrawRectangleRec(row, new Color(244, 238, 238, 255));
+        }
+
+        if (buyable && MenuUi.Clicked(row)) shop.Buy(def, SelectedSide);
+
+        Raylib.DrawText(def.Name, x, y, 19, maxed ? Muted : Ink);
 
         string levelText = maxed ? $"Lv {level}  MAX" : $"Lv {level} -> {level + 1}";
         Raylib.DrawText(levelText, x + 150, y, 18, Muted);
 
         string cost = maxed ? "-" : $"{def.CostFor(level)}c";
         int cw = Raylib.MeasureText(cost, 19);
-        Raylib.DrawText(cost, (int)(panel.X + panel.Width) - 30 - cw, y,
+        Raylib.DrawText(cost, right - cw, y,
             19, maxed ? Muted : affordable ? Gold : Disabled);
 
-        DrawLevelBar(def, level, x, y + 26, (int)(panel.X + panel.Width) - 30 - x);
+        DrawLevelBar(def, level, x, y + 26, right - x);
+    }
+
+    /// <summary>
+    /// Resolved values for the fitted weapon, so the effect of a purchase is
+    /// visible immediately rather than only in play.
+    /// </summary>
+    private static void DrawCurrentStats(Mount mount, int x, int y)
+    {
+        if (mount.IsEmpty) return;
+
+        StatBlock stats = mount.Weapon.Stats;
+
+        Raylib.DrawText(
+            $"damage {stats.Get(StatId.Damage):0.#}    " +
+            $"rate {stats.Get(StatId.FireRate):0.##}/s    " +
+            $"speed {stats.Get(StatId.BulletSpeed):0}",
+            x, y, 16, Muted);
     }
 
     private static void DrawLevelBar(UpgradeDef def, int level, int x, int y, int width)
