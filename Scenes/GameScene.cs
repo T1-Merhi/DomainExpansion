@@ -11,6 +11,11 @@ public class GameScene : IScene
 
     private World _world;
     private WorldRenderer _renderer;
+    private HudRenderer _hud;
+
+    // Death is raised from the tick loop, which can run several times per
+    // frame; this makes sure the transition is requested exactly once.
+    private bool _deathRaised;
     private float _accumulator;
     private int _stepsLastFrame;
 
@@ -25,8 +30,10 @@ public class GameScene : IScene
 
         _world = new World(ScreenSize());
         _renderer = new WorldRenderer();
+        _hud = new HudRenderer();
         _accumulator = 0f;
         _stepsLastFrame = 0;
+        _deathRaised = false;
     }
 
     public void Update(float deltaTime)
@@ -52,6 +59,12 @@ public class GameScene : IScene
 
         // The sim zeroes WheelDelta once it consumes the scroll.
         if (steps > 0) _pendingWheel = _world.Input.WheelDelta;
+
+        if (!_deathRaised && _world.Player.IsDead)
+        {
+            _deathRaised = true;
+            EventRaised?.Invoke(GameEvent.PlayerDied);
+        }
 
         // Hit the clamp: discard the leftover time so the next frame starts clean.
         if (steps == MaxStepsPerFrame) _accumulator = 0f;
@@ -83,9 +96,9 @@ public class GameScene : IScene
 
     private void HandleSceneInput()
     {
-        // Debug stand-in until #16 wires real player death.
-        if (Raylib.IsKeyPressed(KeyboardKey.K))
-            EventRaised?.Invoke(GameEvent.PlayerDied);
+        // Debug damage until enemies deal it for real (#19, #21).
+        if (Raylib.IsKeyPressed(KeyboardKey.J)) _world.Player.TakeDamage(25f);
+        if (Raylib.IsKeyPressed(KeyboardKey.H)) _world.Player.Heal(25f);
 
         if (Raylib.IsKeyPressed(KeyboardKey.Escape))
             EventRaised?.Invoke(GameEvent.MainMenuRequested);
@@ -132,15 +145,11 @@ public class GameScene : IScene
 
     public void Draw()
     {
-        Raylib.DrawText("GAME", 20, 30, 26, Color.DarkBlue);
-        Raylib.DrawText("WASD move   LMB fire   E weapon   3-8 shape   K die   ESC menu   F3 debug",
-            20, 66, 18, Color.DarkGray);
-
-        Mount active = _world.Player.ActiveMount;
-        Raylib.DrawText(active.IsEmpty ? "(empty mount)" : active.Weapon.Name,
-            20, 92, 20, active.IsEmpty ? Color.Gray : Color.Orange);
+        Raylib.DrawText("WASD move   LMB fire   wheel side   E weapon   3-8 shape", 20, 20, 18, Color.DarkGray);
+        Raylib.DrawText("J damage   H heal   ESC menu   F3 debug", 20, 42, 18, Color.DarkGray);
 
         _renderer.Draw(_world, _stepsLastFrame);
+        _hud.Draw(_world);
     }
 
     public void Unload()

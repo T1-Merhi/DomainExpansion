@@ -28,10 +28,48 @@ public sealed class Player
     /// </summary>
     public readonly Mount[] Mounts = new Mount[MaxSides];
 
+    /// <summary>
+    /// Current HP. Kept as a plain field rather than a stat, because it is
+    /// state that changes constantly; MaxHealth is the upgradeable stat.
+    /// </summary>
+    public float Health { get; private set; }
+
+    public bool IsDead => Health <= 0f;
+
     public Player()
     {
         for (int i = 0; i < MaxSides; i++) Mounts[i] = new Mount();
+
         Stats.SetBase(StatId.MoveSpeed, 260f);
+        Stats.SetBase(StatId.MaxHealth, 100f);
+
+        Health = MaxHealth;
+    }
+
+    public float MaxHealth => Stats.Get(StatId.MaxHealth);
+
+    public float HealthFraction
+    {
+        get
+        {
+            float max = MaxHealth;
+            return max <= 0f ? 0f : Math.Clamp(Health / max, 0f, 1f);
+        }
+    }
+
+    public void TakeDamage(float amount)
+    {
+        if (amount <= 0f || IsDead) return;
+
+        Health = MathF.Max(0f, Health - amount);
+    }
+
+    /// <summary>Never exceeds MaxHealth, so #31's Repair cannot overheal.</summary>
+    public void Heal(float amount)
+    {
+        if (amount <= 0f || IsDead) return;
+
+        Health = MathF.Min(MaxHealth, Health + amount);
     }
 
     public Mount ActiveMount => Mounts[ActiveSide];
