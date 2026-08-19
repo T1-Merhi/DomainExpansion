@@ -2,7 +2,8 @@ public class MainMenuScene : IScene
 {
     public event Action<GameEvent> EventRaised;
 
-    private const float VolumeStep = 0.05f;
+    /// <summary>Volume change per second while an arrow key is held.</summary>
+    private const float VolumeStep = 0.6f;
 
     // Layout, in pixels. Rows are laid out from a centred panel so everything
     // recentres automatically when the resolution changes.
@@ -93,9 +94,13 @@ public class MainMenuScene : IScene
     {
         Navigate(SettingsRowCount);
 
+        // Scaled by frame time, so a held key moves the slider at the same
+        // rate on a 60Hz and a 240Hz display. VolumeStep is per second.
+        float dt = Raylib.GetFrameTime();
+
         float delta = 0f;
-        if (Raylib.IsKeyDown(KeyboardKey.Left)) delta = -VolumeStep;
-        else if (Raylib.IsKeyDown(KeyboardKey.Right)) delta = VolumeStep;
+        if (Raylib.IsKeyDown(KeyboardKey.Left)) delta = -VolumeStep * dt;
+        else if (Raylib.IsKeyDown(KeyboardKey.Right)) delta = VolumeStep * dt;
 
         if (delta != 0f) AdjustVolumeRow(_selected, delta);
 
@@ -172,7 +177,7 @@ public class MainMenuScene : IScene
         {
             Rectangle row = RowRect(i, MainOptions.Length);
 
-            if (MenuUi.IsHovered(row)) _selected = i;
+            if (MenuUi.HoverSelects(row)) _selected = i;
 
             if (MenuUi.Button(row, MainOptions[i], _selected == i))
                 Activate(i);
@@ -198,7 +203,7 @@ public class MainMenuScene : IScene
         {
             for (int i = 0; i < SettingsRowCount; i++)
             {
-                if (MenuUi.IsHovered(RowRect(i, SettingsRowCount))) _selected = i;
+                if (MenuUi.HoverSelects(RowRect(i, SettingsRowCount))) _selected = i;
             }
         }
 

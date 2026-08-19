@@ -18,7 +18,7 @@ public sealed class Shop
     /// <summary>Current level of an upgrade for the given mount, or the player.</summary>
     public int LevelOf(UpgradeDef def, int mountIndex)
     {
-        if (def == null) return 0;
+        if (def == null || !IsValidMount(mountIndex)) return 0;
 
         return def.Kind == UpgradeKind.MountStat
             ? _world.Player.Mounts[mountIndex].Levels.Get(def.Id)
@@ -40,7 +40,7 @@ public sealed class Shop
     /// </summary>
     public bool CanBuy(UpgradeDef def, int mountIndex)
     {
-        if (def == null) return false;
+        if (def == null || !IsValidMount(mountIndex)) return false;
         if (IsMaxed(def, mountIndex)) return false;
         if (!CanAfford(def, mountIndex)) return false;
 
@@ -127,7 +127,8 @@ public sealed class Shop
     public bool BuyEquip(UpgradeDef def, int mountIndex, WeaponDef weapon)
     {
         if (def == null || weapon == null) return false;
-        if (!CanAfford(def, mountIndex)) return false;
+        if (!IsValidMount(mountIndex)) return false;
+        if (!CanBuy(def, mountIndex)) return false;
 
         int cost = CostOf(def, mountIndex);
         if (!_world.TrySpendCoins(cost)) return false;
@@ -135,4 +136,12 @@ public sealed class Shop
         _world.Player.Mounts[mountIndex].Equip(weapon);
         return true;
     }
+
+    /// <summary>
+    /// Mounts exist up to MaxSidesCeiling but only SideCount are on the
+    /// polygon, so an out-of-range index would equip a weapon onto a side that
+    /// does not exist - or throw.
+    /// </summary>
+    private bool IsValidMount(int mountIndex) =>
+        mountIndex >= 0 && mountIndex < _world.Player.SideCount;
 }

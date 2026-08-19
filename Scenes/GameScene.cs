@@ -44,6 +44,10 @@ public class GameScene : IScene
         // admin instance's saved edits take effect on restart with no relaunch.
         ConfigStore.Current.Reload();
 
+        // Stale values from the previous run would otherwise show on the death
+        // screen if this run ends before RunResult.Capture is reached.
+        RunResult.Clear();
+
         _world = new World(ScreenSize());
         _renderer = new WorldRenderer();
         _hud = new HudRenderer();
@@ -61,13 +65,22 @@ public class GameScene : IScene
     {
         bool overlayConsumedInput = HandleOverlayInput();
 
-        if (_shopOpen || _paused || overlayConsumedInput)
+        // The pause menu freezes; the shop does not. Freezing for the shop
+        // made it an unlimited-use invulnerability button, since it opens
+        // anywhere - so the arena keeps moving behind it and the rest phase is
+        // once again the safe time to spend.
+        if (_paused || overlayConsumedInput)
         {
-            // Frozen. The accumulator is deliberately not advanced, so closing
-            // an overlay cannot release a burst of banked ticks.
+            // Overlay interaction happens here, not in Draw. Acting during the
+            // draw pass meant a scene transition could be raised while the
+            // frame was still being rendered.
+            if (_paused && !overlayConsumedInput) HandlePauseMenu();
+
             _stepsLastFrame = 0;
             return;
         }
+
+        if (_shopOpen) _shopUi.HandleInput(_world, _shop);
 
         HandleSceneInput();
 
@@ -162,15 +175,17 @@ public class GameScene : IScene
 
     private void HandleSceneInput()
     {
-        // Debug damage until enemies deal it for real (#19, #21).
+        // A real player feature - the HUD advertises it - so it stays ungated.
+        if (Raylib.IsKeyPressed(KeyboardKey.Enter)) _world.WaveRunner.SkipRest();
+
+        // Everything below is a cheat. Ungated it shipped a one-key coin
+        // exploit and free upgrades in the player build, which would make the
+        // leaderboard meaningless.
+        if (!AppMode.IsAdmin) return;
+
         if (Raylib.IsKeyPressed(KeyboardKey.J)) _world.Player.TakeDamage(25f);
         if (Raylib.IsKeyPressed(KeyboardKey.H)) _world.Player.Heal(25f);
-
-        // Debug currency, so the shop can be exercised without farming kills.
         if (Raylib.IsKeyPressed(KeyboardKey.G)) _world.AddCoins(DebugCoinGrant);
-
-        // Skip the remaining rest and start the next wave immediately.
-        if (Raylib.IsKeyPressed(KeyboardKey.Enter)) _world.WaveRunner.SkipRest();
 
         if (Raylib.IsKeyPressed(KeyboardKey.F3))
             _renderer.ShowDebug = !_renderer.ShowDebug;
@@ -219,15 +234,18 @@ public class GameScene : IScene
 
     public void Draw()
     {
-        Raylib.DrawText("WASD move   LMB fire   RMB shop   wheel side   E weapon   3-8 shape", 20, 20, 18, Color.DarkGray);
-        Raylib.DrawText($"J damage   H heal   G coins   Z/X/C spawn   ENTER skip rest   ESC pause   F3 debug",
-            20, 42, 18, Color.DarkGray);
+        if (AppMode.IsAdmin)
+        {
+            Raylib.DrawText("WASD move   LMB fire   RMB shop   wheel side   E weapon   3-8 shape", 20, 20, 18, Color.DarkGray);
+            Raylib.DrawText("J damage   H heal   G coins   Z/X/C spawn   ENTER skip rest   ESC pause   F3 debug",
+                20, 42, 18, Color.DarkGray);
+        }
 
         _renderer.Draw(_world, _stepsLastFrame);
         _hud.Draw(_world);
 
         if (_shopOpen) _shopUi.Draw(_world, _shop);
-        else if (_paused) HandlePauseMenu();
+        else if (_paused) _pauseUi.Draw();
     }
 
     /// <summary>
@@ -236,7 +254,7 @@ public class GameScene : IScene
     /// </summary>
     private void HandlePauseMenu()
     {
-        switch (_pauseUi.Draw())
+        switch (_pauseUi.HandleInput())
         {
             case PauseAction.Resume:
                 _paused = false;

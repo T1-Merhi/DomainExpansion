@@ -184,14 +184,11 @@ public sealed class WorldRenderer
     }
 
     /// <summary>
-    /// Body colour from the enemy definition, so type identification is a data
-    /// decision rather than a switch statement in the renderer.
+    /// Body colour resolved on spawn and carried on the entity. Looking it up
+    /// here meant a linear catalog scan plus an enum parse for every enemy on
+    /// every frame.
     /// </summary>
-    private static Color EnemyColor(World world, Enemy enemy)
-    {
-        EnemyDef def = world.EnemyDefs.Find(enemy.Type);
-        return def == null ? Color.Gray : FromPacked(def.PackedTint);
-    }
+    private static Color EnemyColor(World world, Enemy enemy) => FromPacked(enemy.Tint);
 
     /// <summary>Unpacks the sim's opaque RGBA value into a drawable colour.</summary>
     private static Color FromPacked(uint tint) => new(

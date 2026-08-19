@@ -39,8 +39,11 @@ public class DeathScene : IScene
         int codepoint = Raylib.GetCharPressed();
         while (codepoint > 0)
         {
-            if (codepoint >= 32 && codepoint <= 125 && _name.Length < MaxNameLength)
-                _name += (char)codepoint;
+            // Anything printable, so accented and non-Latin names survive.
+            // The old 32..125 window silently dropped ~ and everything above
+            // ASCII.
+            if (codepoint >= 32 && codepoint != 127 && _name.Length < MaxNameLength)
+                _name += char.ConvertFromUtf32(codepoint);
 
             codepoint = Raylib.GetCharPressed();
         }
@@ -49,13 +52,23 @@ public class DeathScene : IScene
             _name = _name.Substring(0, _name.Length - 1);
 
         if (Raylib.IsKeyPressed(KeyboardKey.Enter)) Commit();
-        else if (Raylib.IsKeyPressed(KeyboardKey.Escape)) Commit();
+
+        // ESC cancels the entry rather than committing it. Committing on the
+        // universal "back out" key means a mistyped name is unrecoverable.
+        else if (Raylib.IsKeyPressed(KeyboardKey.Escape)) Cancel();
     }
 
     private void Commit()
     {
         _newEntryIndex = _leaderboard.Insert(_name, RunResult.Score, RunResult.Wave);
         _leaderboard.Save();
+        _enteringName = false;
+    }
+
+    /// <summary>Abandons the entry. The score is not recorded.</summary>
+    private void Cancel()
+    {
+        _newEntryIndex = -1;
         _enteringName = false;
     }
 
@@ -96,7 +109,7 @@ public class DeathScene : IScene
         string shown = _name + (caretOn ? "_" : " ");
 
         MenuUi.CentredText(shown, centreX, (int)box.Y + 11, 24, MenuUi.Text);
-        MenuUi.CentredText("ENTER to confirm", centreX, y + 124, 16, MenuUi.TextDim);
+        MenuUi.CentredText("ENTER to confirm    ESC to skip", centreX, y + 124, 16, MenuUi.TextDim);
     }
 
     private void DrawLeaderboard(int centreX, int y)

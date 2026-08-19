@@ -20,6 +20,19 @@ public static class MenuUi
         Raylib.DrawText(text, centreX - w / 2, y, size, color);
     }
 
+    /// <summary>
+    /// True only when the pointer moved this frame. Hover that asserts itself
+    /// every frame fights the keyboard: the arrows move the selection and a
+    /// stationary cursor immediately drags it back.
+    /// </summary>
+    public static bool MouseMoved()
+    {
+        Vector2 delta = Raylib.GetMouseDelta();
+        return delta.LengthSquared() > 0.01f;
+    }
+
+    public static bool HoverSelects(Rectangle rect) => MouseMoved() && IsHovered(rect);
+
     public static bool IsHovered(Rectangle rect) =>
         Raylib.CheckCollisionPointRec(Raylib.GetMousePosition(), rect);
 

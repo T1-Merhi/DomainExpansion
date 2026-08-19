@@ -13,7 +13,8 @@
         "CoinValue": 3,
         "ScoreValue": 10
       },
-      "tint": "E03131"
+      "tint": "E03131",
+      "detonates": true
     },
     {
       "type": "Shooter",
@@ -27,9 +28,11 @@
         "BulletLifetime": 4.0,
         "StandoffDistance": 300,
         "CoinValue": 6,
-        "ScoreValue": 25
+        "ScoreValue": 25,
+        "ContactDamage": 8
       },
-      "tint": "9B45C9"
+      "tint": "9B45C9",
+      "detonates": false
     },
     {
       "type": "Spawner",
@@ -41,9 +44,11 @@
         "SpawnCount": 2,
         "StandoffDistance": 420,
         "CoinValue": 20,
-        "ScoreValue": 100
+        "ScoreValue": 100,
+        "ContactDamage": 6
       },
-      "tint": "F08C1E"
+      "tint": "F08C1E",
+      "detonates": false
     }
   ]
 }

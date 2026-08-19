@@ -83,7 +83,7 @@ public class TestArenaScene : IScene
             MousePosition = Raylib.GetMousePosition(),
             MoveAxis = axis,
             FireHeld = Raylib.IsMouseButtonDown(MouseButton.Left),
-            WheelDelta = 0,
+            WheelDelta = (int)Raylib.GetMouseWheelMove(),
         };
     }
 
@@ -241,6 +241,16 @@ public class TestArenaScene : IScene
 
             for (int side = 0; side < _world.Player.SideCount; side++)
             {
+                Mount mount = _world.Player.Mounts[side];
+
+                // Respect appliesTo, or a rifle ends up with shotgun pellet
+                // levels that the shop would never have sold it.
+                if (def.Kind == UpgradeKind.MountStat &&
+                    (mount.IsEmpty || !def.AppliesToWeapon(mount.Weapon.Def.Id)))
+                {
+                    continue;
+                }
+
                 for (int level = _shop.LevelOf(def, side); level < cap; level++)
                     _shop.GrantFree(def, side);
 

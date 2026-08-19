@@ -1,7 +1,10 @@
 /// <summary>
-/// The upgrade overlay. Immediate-mode: it draws the panel and performs the
-/// interaction in one pass, mutating nothing itself - every purchase goes
-/// through Shop, which owns the rules.
+/// The upgrade overlay.
+///
+/// Interaction and drawing are separate passes: HandleInput runs from the
+/// scene's Update and is the only thing that mutates anything; Draw only
+/// draws. Layout comes from pure functions of the screen size used by both, so
+/// the two can never disagree about where a control is.
 /// </summary>
 public sealed class ShopRenderer
 {
@@ -10,6 +13,7 @@ public sealed class ShopRenderer
     private const int LeftColumnWidth = 320;
     private const int RowHeight = 56;
     private const int PickerRowHeight = 28;
+    private const int DetailTop = 96;
 
     private static readonly Color Panel = new(246, 246, 249, 250);
     private static readonly Color PanelEdge = new(70, 70, 82, 255);
@@ -21,29 +25,84 @@ public sealed class ShopRenderer
     private static readonly Color HoverFill = new(236, 240, 232, 255);
     private static readonly Color HoverEdge = new(120, 170, 110, 255);
 
+    private static readonly string[] PlacedPlayerUpgrades = ["maxhealth"];
+
     /// <summary>Which side's detail is shown. Owned here; the sim is untouched.</summary>
     public int SelectedSide;
+
+    private float _detailScroll;
 
     /// <summary>Reused so building the upgrade row list does not allocate per frame.</summary>
     private readonly List<UpgradeDef> _rows = new();
 
-    public void Draw(World world, Shop shop)
+    // --- Layout -----------------------------------------------------------
+
+    private static Rectangle PanelRect() => new(
+        (Raylib.GetScreenWidth() - PanelWidth) / 2f,
+        (Raylib.GetScreenHeight() - PanelHeight) / 2f,
+        PanelWidth, PanelHeight);
+
+    private static Rectangle DetailRect(Rectangle panel) => new(
+        panel.X + LeftColumnWidth + 20,
+        panel.Y + DetailTop,
+        panel.Width - LeftColumnWidth - 50,
+        panel.Height - DetailTop - 110);
+
+    private static int DetailRight(Rectangle panel) => (int)(panel.X + panel.Width) - 30;
+
+    private Rectangle UpgradeRowRect(Rectangle panel, int index)
+    {
+        Rectangle detail = DetailRect(panel);
+        float y = detail.Y + 44 + index * RowHeight - _detailScroll;
+
+        return new Rectangle(detail.X - 8, y - 6, DetailRight(panel) - detail.X + 16, RowHeight - 8);
+    }
+
+    private static Rectangle FooterRect(Rectangle panel, int slot, int row)
+    {
+        float width = (panel.Width - 60) / 3f;
+        float y = panel.Y + panel.Height - 80 - row * 48;
+
+        return new Rectangle(panel.X + 24 + width * slot, y, width - 10, 42);
+    }
+
+    /// <summary>Y of the first weapon-picker row, which sits below the upgrade rows.</summary>
+    private float PickerTop(Rectangle panel, Mount mount)
+    {
+        Rectangle detail = DetailRect(panel);
+
+        if (mount.IsEmpty) return detail.Y + 50;
+
+        return detail.Y + 44 + _rows.Count * RowHeight + 48 - _detailScroll;
+    }
+
+    // --- Interaction ------------------------------------------------------
+
+    public void HandleInput(World world, Shop shop)
     {
         Rectangle panel = PanelRect();
+        Player player = world.Player;
 
-        DimBackground();
+        ClampSelection(player);
+        HandleScroll(panel, player);
 
-        Raylib.DrawRectangleRec(panel, Panel);
-        Raylib.DrawRectangleLinesEx(panel, 2.5f, PanelEdge);
+        Mount mount = player.Mounts[SelectedSide];
 
-        ClampSelection(world.Player);
-        HandleSideSelection(world.Player);
+        if (!mount.IsEmpty)
+        {
+            world.UpgradeDefs.CollectMountUpgrades(mount.Weapon.Def.Id, _rows);
 
-        DrawHeader(world, panel);
-        DrawSidePanel(world, panel);
-        DrawDetail(world, panel, shop);
-        DrawFooter(world, panel, shop);
-        DrawFooterHint(panel);
+            for (int i = 0; i < _rows.Count; i++)
+            {
+                Rectangle row = UpgradeRowRect(panel, i);
+
+                if (!MenuUi.Clicked(row)) continue;
+                if (shop.CanBuy(_rows[i], SelectedSide)) shop.Buy(_rows[i], SelectedSide);
+            }
+        }
+
+        HandlePickerInput(world, shop, panel, mount);
+        HandleFooterInput(world, shop, panel);
     }
 
     private void ClampSelection(Player player)
@@ -52,33 +111,110 @@ public sealed class ShopRenderer
     }
 
     /// <summary>
-    /// Side switching matches the carousel in play: scroll to change side. Small
-    /// per-side hit targets were fiddly to click and grew into the footer once
-    /// the polygon had many sides, so the list they replaced is gone entirely.
+    /// The wheel changes side over the turret and scrolls over the detail
+    /// column. One wheel serving both is unambiguous only because the two live
+    /// in different halves of the panel.
     /// </summary>
-    private void HandleSideSelection(Player player)
+    private void HandleScroll(Rectangle panel, Player player)
     {
-        int n = player.SideCount;
-        if (n <= 0) return;
+        int wheel = (int)Raylib.GetMouseWheelMove();
+        bool overDetail = MenuUi.IsHovered(DetailRect(panel));
 
-        int delta = (int)Raylib.GetMouseWheelMove();
+        if (overDetail && wheel != 0)
+        {
+            _detailScroll = MathF.Max(0f, _detailScroll - wheel * 40f);
+            return;
+        }
+
+        int delta = overDetail ? 0 : wheel;
 
         if (Raylib.IsKeyPressed(KeyboardKey.Right) || Raylib.IsKeyPressed(KeyboardKey.Down)) delta += 1;
         if (Raylib.IsKeyPressed(KeyboardKey.Left) || Raylib.IsKeyPressed(KeyboardKey.Up)) delta -= 1;
 
         if (delta == 0) return;
 
+        int n = player.SideCount;
         SelectedSide = ((SelectedSide + delta) % n + n) % n;
+
+        // A different side has a different row count, so a carried-over scroll
+        // could leave the panel showing empty space.
+        _detailScroll = 0f;
     }
 
-    private static Rectangle PanelRect() => new(
-        (Raylib.GetScreenWidth() - PanelWidth) / 2f,
-        (Raylib.GetScreenHeight() - PanelHeight) / 2f,
-        PanelWidth, PanelHeight);
+    private void HandlePickerInput(World world, Shop shop, Rectangle panel, Mount mount)
+    {
+        UpgradeDef equip = world.UpgradeDefs.Find("equip");
+        if (equip == null) return;
 
-    private static void DimBackground() =>
+        Rectangle detail = DetailRect(panel);
+        int cost = shop.CostOf(equip, SelectedSide);
+
+        float y = PickerTop(panel, mount);
+
+        foreach (WeaponDef def in world.Weapons.Weapons)
+        {
+            bool isFitted = !mount.IsEmpty && mount.Weapon.Def.Id == def.Id;
+            bool clickable = !isFitted && world.Coins >= cost;
+
+            var row = new Rectangle(detail.X - 8, y - 4, DetailRight(panel) - detail.X + 16, PickerRowHeight - 2);
+
+            if (clickable && MenuUi.Clicked(row)) shop.BuyEquip(equip, SelectedSide, def);
+
+            y += PickerRowHeight;
+        }
+    }
+
+    private void HandleFooterInput(World world, Shop shop, Rectangle panel)
+    {
+        TryFooterClick(shop, world.UpgradeDefs.Find("shape"), FooterRect(panel, 0, 0));
+        TryFooterClick(shop, world.UpgradeDefs.Find("maxhealth"), FooterRect(panel, 1, 0));
+        TryFooterClick(shop, world.UpgradeDefs.Find("repair"), FooterRect(panel, 2, 0));
+
+        int slot = 0;
+        foreach (UpgradeDef def in world.UpgradeDefs.Upgrades)
+        {
+            if (def.Kind != UpgradeKind.PlayerStat) continue;
+            if (Array.IndexOf(PlacedPlayerUpgrades, def.Id) >= 0) continue;
+
+            TryFooterClick(shop, def, FooterRect(panel, slot, 1));
+            if (++slot >= 3) return;
+        }
+    }
+
+    private void TryFooterClick(Shop shop, UpgradeDef def, Rectangle rect)
+    {
+        if (def == null || !MenuUi.Clicked(rect)) return;
+        if (shop.CanBuy(def, SelectedSide)) shop.Buy(def, SelectedSide);
+    }
+
+    // --- Drawing ----------------------------------------------------------
+
+    public void Draw(World world, Shop shop)
+    {
+        Rectangle panel = PanelRect();
+
         Raylib.DrawRectangle(0, 0, Raylib.GetScreenWidth(), Raylib.GetScreenHeight(),
             new Color(15, 15, 25, 140));
+
+        Raylib.DrawRectangleRec(panel, Panel);
+        Raylib.DrawRectangleLinesEx(panel, 2.5f, PanelEdge);
+
+        DrawHeader(world, panel);
+        DrawSidePanel(world, panel);
+
+        // Clipped, so a long upgrade list scrolls inside the column instead of
+        // spilling over the footer buttons.
+        Rectangle detail = DetailRect(panel);
+        Raylib.BeginScissorMode((int)detail.X - 12, (int)detail.Y - 4,
+            (int)detail.Width + 24, (int)detail.Height + 8);
+
+        DrawDetail(world, panel, shop);
+
+        Raylib.EndScissorMode();
+
+        DrawFooter(world, panel, shop);
+        DrawFooterHint(panel);
+    }
 
     private void DrawHeader(World world, Rectangle panel)
     {
@@ -92,11 +228,9 @@ public sealed class ShopRenderer
         int lw = Raylib.MeasureText(label, 13);
         Raylib.DrawText(label, (int)(panel.X + panel.Width) - 24 - lw, (int)panel.Y + 52, 13, Muted);
 
-        var divider = new Rectangle(panel.X + 20, panel.Y + 74, panel.Width - 40, 1.5f);
-        Raylib.DrawRectangleRec(divider, new Color(215, 215, 222, 255));
+        Raylib.DrawRectangleRec(new Rectangle(panel.X + 20, panel.Y + 74, panel.Width - 40, 1.5f),
+            new Color(215, 215, 222, 255));
     }
-
-    // --- Left column: turret preview -------------------------------------
 
     private void DrawSidePanel(World world, Rectangle panel)
     {
@@ -122,16 +256,12 @@ public sealed class ShopRenderer
         Raylib.DrawText(hint, centreX - hw / 2, (int)panel.Y + 384, 13, Muted);
     }
 
-    /// <summary>
-    /// Turret drawn with each side in its weapon's colour and the selected side
-    /// thickened, so the preview alone communicates the whole loadout.
-    /// </summary>
     private void DrawTurretPreview(Player player, Vector2 centre)
     {
         int n = player.SideCount;
         const float radius = 88f;
 
-        Span<Vector2> verts = stackalloc Vector2[Player.MaxSides];
+        Span<Vector2> verts = stackalloc Vector2[Player.MaxSidesCeiling];
 
         float step = MathF.Tau / n;
         float baseRotation = -MathF.PI / 2f - MathF.PI / n;
@@ -152,10 +282,8 @@ public sealed class ShopRenderer
 
             Raylib.DrawLineEx(a, b, i == SelectedSide ? 7f : 3f, color);
 
-            // Number each side against its edge so the preview maps to the count.
             Vector2 mid = (a + b) * 0.5f;
-            Vector2 outward = Vector2.Normalize(mid - centre);
-            Vector2 label = mid + outward * 16f;
+            Vector2 label = mid + Vector2.Normalize(mid - centre) * 16f;
 
             string text = (i + 1).ToString();
             int tw = Raylib.MeasureText(text, 16);
@@ -167,73 +295,54 @@ public sealed class ShopRenderer
     private static Color WeaponColorOf(Mount mount) => FromPacked(mount.Weapon.Def.PackedTint);
 
     private static Color FromPacked(uint t) => new(
-        (int)((t >> 24) & 0xFF),
-        (int)((t >> 16) & 0xFF),
-        (int)((t >> 8) & 0xFF),
-        255);
-
-    // --- Right column: selected mount detail -----------------------------
+        (int)((t >> 24) & 0xFF), (int)((t >> 16) & 0xFF), (int)((t >> 8) & 0xFF), 255);
 
     private void DrawDetail(World world, Rectangle panel, Shop shop)
     {
         Player player = world.Player;
         Mount mount = player.Mounts[SelectedSide];
 
-        int x = (int)panel.X + LeftColumnWidth + 20;
-        int y = (int)panel.Y + 96;
+        Rectangle detail = DetailRect(panel);
+        int x = (int)detail.X;
 
         string title = mount.IsEmpty
             ? $"SIDE {SelectedSide + 1} - EMPTY"
             : $"SIDE {SelectedSide + 1} - {mount.Weapon.Name.ToUpperInvariant()}";
 
-        Raylib.DrawText(title, x, y, 22, Ink);
+        Raylib.DrawText(title, x, (int)detail.Y, 22, Ink);
 
-        if (mount.IsEmpty)
+        if (!mount.IsEmpty)
         {
-            DrawWeaponPicker(world, shop, x, y + 44, panel);
-            return;
+            world.UpgradeDefs.CollectMountUpgrades(mount.Weapon.Def.Id, _rows);
+
+            for (int i = 0; i < _rows.Count; i++)
+                DrawUpgradeRow(shop, _rows[i], panel, UpgradeRowRect(panel, i));
+
+            float statsY = detail.Y + 44 + _rows.Count * RowHeight + 6 - _detailScroll;
+            DrawCurrentStats(mount, x, (int)statsY);
         }
 
-        // Rows come from the catalogue filtered by the fitted weapon, so a
-        // weapon-specific upgrade appears purely from its appliesTo entry.
-        world.UpgradeDefs.CollectMountUpgrades(mount.Weapon.Def.Id, _rows);
-
-        int rowY = y + 44;
-        foreach (UpgradeDef def in _rows)
-        {
-            DrawUpgradeRow(world, shop, def, x, rowY, panel);
-            rowY += RowHeight;
-        }
-
-        DrawCurrentStats(mount, x, rowY + 4);
-        DrawWeaponPicker(world, shop, x, rowY + 32, panel);
+        DrawWeaponPicker(world, shop, panel, mount);
     }
 
-    /// <summary>
-    /// One purchasable row. Clicking anywhere on it buys, so the whole row is
-    /// the target rather than a small button.
-    /// </summary>
-    private void DrawUpgradeRow(World world, Shop shop, UpgradeDef def, int x, int y, Rectangle panel)
+    private void DrawUpgradeRow(Shop shop, UpgradeDef def, Rectangle panel, Rectangle row)
     {
         if (def == null) return;
 
-        int right = (int)(panel.X + panel.Width) - 30;
-        var row = new Rectangle(x - 8, y - 6, right - x + 16, RowHeight - 8);
+        int right = DetailRight(panel);
+        int x = (int)row.X + 8;
+        int y = (int)row.Y + 6;
 
         int level = shop.LevelOf(def, SelectedSide);
         bool maxed = shop.IsMaxed(def, SelectedSide);
         bool affordable = shop.CanAfford(def, SelectedSide);
         bool buyable = shop.CanBuy(def, SelectedSide);
 
-        bool hovered = MenuUi.IsHovered(row);
-
-        if (hovered && buyable)
+        if (MenuUi.IsHovered(row) && buyable)
         {
             Raylib.DrawRectangleRec(row, HoverFill);
             Raylib.DrawRectangleLinesEx(row, 1.5f, HoverEdge);
         }
-
-        if (buyable && MenuUi.Clicked(row)) shop.Buy(def, SelectedSide);
 
         Raylib.DrawText(def.Name, x, y, 19, maxed ? Maxed : Ink);
 
@@ -242,8 +351,7 @@ public sealed class ShopRenderer
 
         string cost = maxed ? "MAX" : $"{def.CostFor(level)}c";
         int cw = Raylib.MeasureText(cost, 19);
-        Raylib.DrawText(cost, right - cw, y, 19,
-            maxed ? Maxed : affordable ? Gold : Disabled);
+        Raylib.DrawText(cost, right - cw, y, 19, maxed ? Maxed : affordable ? Gold : Disabled);
 
         DrawLevelBar(def, level, maxed, x, y + 26, right - x);
     }
@@ -257,15 +365,11 @@ public sealed class ShopRenderer
 
         for (int i = 0; i < segments; i++)
         {
-            var seg = new Rectangle(x + i * segWidth, y, segWidth - 3f, 8f);
-            Raylib.DrawRectangleRec(seg, i < level ? filled : new Color(224, 224, 230, 255));
+            Raylib.DrawRectangleRec(new Rectangle(x + i * segWidth, y, segWidth - 3f, 8f),
+                i < level ? filled : new Color(224, 224, 230, 255));
         }
     }
 
-    /// <summary>
-    /// Resolved values for the fitted weapon, so the effect of a purchase is
-    /// visible immediately rather than only in play.
-    /// </summary>
     private static void DrawCurrentStats(Mount mount, int x, int y)
     {
         if (mount.IsEmpty) return;
@@ -283,23 +387,21 @@ public sealed class ShopRenderer
         Raylib.DrawText(text, x, y, 16, Muted);
     }
 
-    /// <summary>
-    /// Weapon list built from the loaded catalogue, so a weapon added to
-    /// weapons.json is purchasable with no code change here.
-    /// </summary>
-    private void DrawWeaponPicker(World world, Shop shop, int x, int y, Rectangle panel)
+    private void DrawWeaponPicker(World world, Shop shop, Rectangle panel, Mount mount)
     {
         UpgradeDef equip = world.UpgradeDefs.Find("equip");
         if (equip == null) return;
 
-        Mount mount = world.Player.Mounts[SelectedSide];
-        int right = (int)(panel.X + panel.Width) - 30;
+        Rectangle detail = DetailRect(panel);
+        int x = (int)detail.X;
+        int right = DetailRight(panel);
+
+        float y = PickerTop(panel, mount);
 
         string heading = mount.IsEmpty ? "FIT A WEAPON" : "REPLACE WEAPON";
-        Raylib.DrawText(heading, x, y, 15, Muted);
+        Raylib.DrawText(heading, x, (int)y - 22, 15, Muted);
 
         int cost = shop.CostOf(equip, SelectedSide);
-        int rowY = y + 22;
 
         foreach (WeaponDef def in world.Weapons.Weapons)
         {
@@ -307,7 +409,7 @@ public sealed class ShopRenderer
             bool affordable = world.Coins >= cost;
             bool clickable = !isFitted && affordable;
 
-            var row = new Rectangle(x - 8, rowY - 4, right - x + 16, PickerRowHeight - 2);
+            var row = new Rectangle(x - 8, y - 4, right - x + 16, PickerRowHeight - 2);
 
             if (MenuUi.IsHovered(row) && clickable)
             {
@@ -315,46 +417,49 @@ public sealed class ShopRenderer
                 Raylib.DrawRectangleLinesEx(row, 1.5f, HoverEdge);
             }
 
-            if (clickable && MenuUi.Clicked(row)) shop.BuyEquip(equip, SelectedSide, def);
+            Raylib.DrawRectangleRec(new Rectangle(x, y + 2, 12f, 12f), FromPacked(def.PackedTint));
 
-            Raylib.DrawRectangleRec(new Rectangle(x, rowY + 2, 12f, 12f), FromPacked(def.PackedTint));
-
-            Raylib.DrawText(def.Name, x + 22, rowY, 17,
+            Raylib.DrawText(def.Name, x + 22, (int)y, 17,
                 isFitted ? Maxed : clickable ? Ink : Disabled);
 
             string trailing = isFitted ? "fitted" : $"{cost}c";
             int tw = Raylib.MeasureText(trailing, 15);
-            Raylib.DrawText(trailing, right - tw, rowY + 1, 15,
+            Raylib.DrawText(trailing, right - tw, (int)y + 1, 15,
                 isFitted ? Maxed : affordable ? Gold : Disabled);
 
-            rowY += PickerRowHeight;
+            y += PickerRowHeight;
         }
 
         if (!mount.IsEmpty)
-            Raylib.DrawText("Replacing resets this side's upgrade levels.", x, rowY + 2, 14, Muted);
+            Raylib.DrawText("Replacing resets this side's upgrade levels.", x, (int)y + 2, 14, Muted);
     }
-
-    // --- Footer: run-wide purchases --------------------------------------
 
     private void DrawFooter(World world, Rectangle panel, Shop shop)
     {
-        int y = (int)(panel.Y + panel.Height) - 80;
-        float width = (panel.Width - 60) / 3f;
-
         DrawFooterButton(world, shop, world.UpgradeDefs.Find("shape"),
-            new Rectangle(panel.X + 24, y, width - 10, 42),
-            ShapeLabel(world.Player));
+            FooterRect(panel, 0, 0), ShapeLabel(world.Player));
 
         DrawFooterButton(world, shop, world.UpgradeDefs.Find("maxhealth"),
-            new Rectangle(panel.X + 24 + width, y, width - 10, 42),
-            MaxHealthLabel(world.Player));
+            FooterRect(panel, 1, 0), MaxHealthLabel(world.Player));
 
         DrawFooterButton(world, shop, world.UpgradeDefs.Find("repair"),
-            new Rectangle(panel.X + 24 + width * 2, y, width - 10, 42),
-            RepairLabel(world.Player));
+            FooterRect(panel, 2, 0), RepairLabel(world.Player));
+
+        // Anything of kind PlayerStat not placed above gets a second row, so an
+        // upgrade added to JSON cannot end up defined but unreachable.
+        int slot = 0;
+        foreach (UpgradeDef def in world.UpgradeDefs.Upgrades)
+        {
+            if (def.Kind != UpgradeKind.PlayerStat) continue;
+            if (Array.IndexOf(PlacedPlayerUpgrades, def.Id) >= 0) continue;
+
+            DrawFooterButton(world, shop, def, FooterRect(panel, slot, 1),
+                $"{def.Name} (Lv {shop.LevelOf(def, SelectedSide)})");
+
+            if (++slot >= 3) return;
+        }
     }
 
-    /// <summary>Names the shape being bought, so the cost has something concrete attached.</summary>
     private static string ShapeLabel(Player player)
     {
         if (player.SideCount >= Player.MaxSides) return "Max sides";
@@ -389,10 +494,7 @@ public sealed class ShopRenderer
         Raylib.DrawRectangleLinesEx(rect, 1.5f,
             maxed ? Maxed : buyable ? HoverEdge : new Color(214, 214, 222, 255));
 
-        if (buyable && MenuUi.Clicked(rect)) shop.Buy(def, SelectedSide);
-
-        string label = labelOverride ?? def.Name;
-        Raylib.DrawText(label, (int)rect.X + 12, (int)rect.Y + 7, 17,
+        Raylib.DrawText(labelOverride ?? def.Name, (int)rect.X + 12, (int)rect.Y + 7, 17,
             maxed ? Maxed : buyable ? Ink : Muted);
 
         int level = shop.LevelOf(def, SelectedSide);
@@ -405,10 +507,9 @@ public sealed class ShopRenderer
 
     private static void DrawFooterHint(Rectangle panel)
     {
-        const string hint = "Right-click to close";
+        const string hint = "Right-click to close   -   the arena keeps moving";
         int w = Raylib.MeasureText(hint, 15);
-        Raylib.DrawText(hint,
-            (int)(panel.X + panel.Width / 2) - w / 2,
+        Raylib.DrawText(hint, (int)(panel.X + panel.Width / 2) - w / 2,
             (int)(panel.Y + panel.Height) - 28, 15, Muted);
     }
 }

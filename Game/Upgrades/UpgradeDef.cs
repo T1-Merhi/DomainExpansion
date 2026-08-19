@@ -54,8 +54,27 @@ public sealed class UpgradeDef
 
     public bool HasStat => !string.IsNullOrWhiteSpace(Stat);
 
-    public StatId ParsedStat =>
-        Enum.TryParse<StatId>(Stat, ignoreCase: true, out var id) ? id : StatId.Damage;
+    /// <summary>
+    /// Falls back to Damage on an unrecognised name, but says so - a silent
+    /// fallback turns a typo into a stat that quietly upgrades the wrong thing.
+    /// </summary>
+    public StatId ParsedStat
+    {
+        get
+        {
+            if (Enum.TryParse<StatId>(Stat, ignoreCase: true, out var id)) return id;
+
+            if (!_statWarned)
+            {
+                _statWarned = true;
+                Console.WriteLine($"Upgrades: '{Id}' has unknown stat '{Stat}', falling back to Damage");
+            }
+
+            return StatId.Damage;
+        }
+    }
+
+    private bool _statWarned;
 
     public bool IsMaxed(int currentLevel) => MaxLevel > 0 && currentLevel >= MaxLevel;
 

@@ -1,25 +1,51 @@
 {
   "schemaVersion": 1,
-
   "restSeconds": 20,
   "spawnBatchSize": 4,
   "spawnIntervalSeconds": 0.4,
-
   "counts": {
-    "chaser":  { "base": 20, "perWave": 20 },
-    "shooter": { "base": 10, "perWave": 10 },
-    "spawner": { "base": 2,  "perWave": 2 }
+    "chaser": {
+      "base": 6,
+      "perWave": 4
+    },
+    "shooter": {
+      "base": 2,
+      "perWave": 2
+    },
+    "spawner": {
+      "base": 0,
+      "perWave": 1
+    }
   },
-
   "scaling": {
-    "MaxHealth":     { "base": 1.0, "perWave": 0.15 },
-    "MoveSpeed":     { "base": 1.0, "perWave": 0.05, "max": 2.5 },
-    "ContactDamage": { "base": 1.0, "perWave": 0.08, "max": 4.0 },
-    "Damage":        { "base": 1.0, "perWave": 0.08, "max": 4.0 },
-    "SpawnInterval": { "base": 1.0, "perWave": -0.03, "min": 0.35 }
+    "MaxHealth": {
+      "base": 1.0,
+      "perWave": 0.15
+    },
+    "MoveSpeed": {
+      "base": 1.0,
+      "perWave": 0.05,
+      "max": 2.5
+    },
+    "ContactDamage": {
+      "base": 1.0,
+      "perWave": 0.08,
+      "max": 4.0
+    },
+    "Damage": {
+      "base": 1.0,
+      "perWave": 0.08,
+      "max": 4.0
+    },
+    "SpawnInterval": {
+      "base": 1.0,
+      "perWave": -0.03,
+      "min": 0.35
+    }
   },
-
   "overrides": {
-    "5": { "spawner": 10 }
+    "5": {
+      "spawner": 3
+    }
   }
 }

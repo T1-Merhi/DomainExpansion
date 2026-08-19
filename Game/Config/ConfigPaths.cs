@@ -84,10 +84,22 @@ public static class ConfigPaths
     {
         try
         {
-            string temp = path + ".tmp";
-            File.WriteAllText(temp, contents);
-            File.Move(temp, path, overwrite: true);
-            return true;
+            // Unique per write: a fixed ".tmp" is shared state between
+            // instances, so two admin windows saving at once would clobber
+            // each other's temp file and one would move a truncated result
+            // into place.
+            string temp = $"{path}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp";
+
+            try
+            {
+                File.WriteAllText(temp, contents);
+                File.Move(temp, path, overwrite: true);
+                return true;
+            }
+            finally
+            {
+                if (File.Exists(temp)) File.Delete(temp);
+            }
         }
         catch (Exception ex)
         {
