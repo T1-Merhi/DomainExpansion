@@ -141,6 +141,19 @@ public sealed class World
     }
 
     /// <summary>
+    /// The only way to damage the player. God mode and the dead check live
+    /// here rather than at each call site, so a new damage source cannot
+    /// quietly opt out of them the way chaser detonation had.
+    /// </summary>
+    public void DamagePlayer(float amount)
+    {
+        if (amount <= 0f || GodMode || Player.IsDead) return;
+
+        Player.TakeDamage(amount);
+        AddShake(Tuning.Effects.ShakeOnPlayerHit);
+    }
+
+    /// <summary>
     /// Applies damage and produces the feedback that goes with it, so no caller
     /// can damage an enemy without the player seeing why it died.
     /// </summary>
@@ -445,8 +458,7 @@ public sealed class World
 
             if (!Collision.CirclesOverlap(b.Position, b.Radius, Player.Position, Player.Radius)) continue;
 
-            Player.TakeDamage(b.Damage);
-            AddShake(Tuning.Effects.ShakeOnPlayerHit);
+            DamagePlayer(b.Damage);
             EnemyBullets.ReturnAt(i);
         }
     }
@@ -471,7 +483,7 @@ public sealed class World
 
             if (!Collision.CirclesOverlap(Player.Position, Player.Radius, e.Position, e.Radius)) continue;
 
-            Player.TakeDamage(contact * FixedStep);
+            DamagePlayer(contact * FixedStep);
         }
     }
 
