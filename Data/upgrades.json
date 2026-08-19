@@ -24,6 +24,30 @@
       "costGrowth": 1.4
     },
     {
+      "id": "projectiles",
+      "name": "Extra Pellet",
+      "kind": "MountStat",
+      "stat": "ProjectileCount",
+      "op": "Add",
+      "valuePerLevel": 1,
+      "maxLevel": 3,
+      "appliesTo": [ "shotgun" ],
+      "costBase": 180,
+      "costGrowth": 1.7
+    },
+    {
+      "id": "blastradius",
+      "name": "Blast Radius",
+      "kind": "MountStat",
+      "stat": "ExplosionRadius",
+      "op": "Add",
+      "valuePerLevel": 15,
+      "maxLevel": 5,
+      "appliesTo": [ "grenade" ],
+      "costBase": 130,
+      "costGrowth": 1.5
+    },
+    {
       "id": "maxhealth",
       "name": "Max Health",
       "kind": "PlayerStat",

@@ -40,6 +40,12 @@ public sealed class UpgradeDef
     /// <summary>Zero means unbounded.</summary>
     public int MaxLevel { get; set; }
 
+    /// <summary>
+    /// Weapon ids this upgrade is offered for. Empty means every weapon, so
+    /// generic upgrades need no entry and weapon-specific ones stay data-driven.
+    /// </summary>
+    public List<string> AppliesTo { get; set; } = new();
+
     public float CostBase { get; set; } = 50f;
     public float CostGrowth { get; set; } = 1.35f;
 
@@ -52,6 +58,18 @@ public sealed class UpgradeDef
         Enum.TryParse<StatId>(Stat, ignoreCase: true, out var id) ? id : StatId.Damage;
 
     public bool IsMaxed(int currentLevel) => MaxLevel > 0 && currentLevel >= MaxLevel;
+
+    public bool AppliesToWeapon(string weaponId)
+    {
+        if (AppliesTo.Count == 0) return true;
+
+        foreach (string id in AppliesTo)
+        {
+            if (string.Equals(id, weaponId, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+
+        return false;
+    }
 
     /// <summary>Cost to go from <paramref name="currentLevel"/> to the next one.</summary>
     public int CostFor(int currentLevel)
@@ -77,6 +95,24 @@ public sealed class UpgradeCatalog
         var catalog = JsonData.Load<UpgradeCatalog>("upgrades.json");
         Console.WriteLine($"Upgrades: loaded {catalog.Upgrades.Count} definition(s)");
         return catalog;
+    }
+
+    /// <summary>
+    /// Fills <paramref name="into"/> with the mount upgrades offered for a
+    /// weapon. Caller supplies the list so the shop can reuse one buffer rather
+    /// than allocating every frame it is drawn.
+    /// </summary>
+    public void CollectMountUpgrades(string weaponId, List<UpgradeDef> into)
+    {
+        into.Clear();
+
+        foreach (var u in Upgrades)
+        {
+            if (u.Kind != UpgradeKind.MountStat) continue;
+            if (!u.AppliesToWeapon(weaponId)) continue;
+
+            into.Add(u);
+        }
     }
 
     public UpgradeDef Find(string id)
