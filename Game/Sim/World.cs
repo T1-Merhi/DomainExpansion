@@ -12,18 +12,25 @@ public sealed class World
 
     public readonly Player Player = new();
 
+    /// <summary>Play area in world units. Currently matches the window.</summary>
+    public Vector2 ArenaSize { get; private set; }
+
     /// <summary>Latest input snapshot, written by the scene before ticking.</summary>
     public InputState Input;
 
-    public World(Vector2 playerStart)
+    public World(Vector2 arenaSize)
     {
-        Player.Position = playerStart;
+        ArenaSize = arenaSize;
+        Player.Position = arenaSize * 0.5f;
     }
+
+    public void Resize(Vector2 arenaSize) => ArenaSize = arenaSize;
 
     public void Tick()
     {
         TickCount++;
 
+        Player.Move(Input.MoveAxis, ArenaSize);
         Player.AimAt(Input.MousePosition);
     }
 }

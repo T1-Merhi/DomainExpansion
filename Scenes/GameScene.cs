@@ -19,8 +19,7 @@ public class GameScene : IScene
         _assets = assets;
         _settings = settings;
 
-        var centre = new Vector2(Raylib.GetScreenWidth() * 0.5f, Raylib.GetScreenHeight() * 0.5f);
-        _world = new World(centre);
+        _world = new World(ScreenSize());
         _renderer = new WorldRenderer();
         _accumulator = 0f;
         _stepsLastFrame = 0;
@@ -30,6 +29,7 @@ public class GameScene : IScene
     {
         HandleSceneInput();
 
+        _world.Resize(ScreenSize());
         _world.Input = ReadInput();
 
         _accumulator += deltaTime;
@@ -48,11 +48,24 @@ public class GameScene : IScene
         _stepsLastFrame = steps;
     }
 
+    private static Vector2 ScreenSize() =>
+        new(Raylib.GetScreenWidth(), Raylib.GetScreenHeight());
+
     private static InputState ReadInput()
     {
+        var axis = Vector2.Zero;
+        if (Raylib.IsKeyDown(KeyboardKey.W) || Raylib.IsKeyDown(KeyboardKey.Up)) axis.Y -= 1f;
+        if (Raylib.IsKeyDown(KeyboardKey.S) || Raylib.IsKeyDown(KeyboardKey.Down)) axis.Y += 1f;
+        if (Raylib.IsKeyDown(KeyboardKey.A) || Raylib.IsKeyDown(KeyboardKey.Left)) axis.X -= 1f;
+        if (Raylib.IsKeyDown(KeyboardKey.D) || Raylib.IsKeyDown(KeyboardKey.Right)) axis.X += 1f;
+
+        // Normalise so diagonals are not faster than cardinals.
+        if (axis.LengthSquared() > 1f) axis = Vector2.Normalize(axis);
+
         return new InputState
         {
             MousePosition = Raylib.GetMousePosition(),
+            MoveAxis = axis,
             FireHeld = Raylib.IsMouseButtonDown(MouseButton.Left),
             WheelDelta = (int)Raylib.GetMouseWheelMove(),
         };
