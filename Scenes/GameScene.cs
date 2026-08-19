@@ -6,6 +6,12 @@ public class GameScene : IScene
     // after a long stall (window drag, breakpoint, alt-tab).
     private const int MaxStepsPerFrame = 5;
 
+    /// <summary>
+    /// Large enough that a single press affords the more expensive upgrades,
+    /// so the shop can be exercised without grinding kills.
+    /// </summary>
+    private const int DebugCoinGrant = 99999;
+
     private AssetManager _assets;
     private GameSettings _settings;
 
@@ -14,8 +20,10 @@ public class GameScene : IScene
     private HudRenderer _hud;
     private ShopRenderer _shopUi;
     private Shop _shop;
+    private PauseRenderer _pauseUi;
 
     private bool _shopOpen;
+    private bool _paused;
 
     // Death is raised from the tick loop, which can run several times per
     // frame; this makes sure the transition is requested exactly once.
@@ -37,20 +45,22 @@ public class GameScene : IScene
         _hud = new HudRenderer();
         _shopUi = new ShopRenderer();
         _shop = new Shop(_world);
+        _pauseUi = new PauseRenderer();
         _accumulator = 0f;
         _stepsLastFrame = 0;
         _deathRaised = false;
         _shopOpen = false;
+        _paused = false;
     }
 
     public void Update(float deltaTime)
     {
-        HandleShopToggle();
+        bool overlayConsumedInput = HandleOverlayInput();
 
-        if (_shopOpen)
+        if (_shopOpen || _paused || overlayConsumedInput)
         {
             // Frozen. The accumulator is deliberately not advanced, so closing
-            // the shop cannot release a burst of banked ticks.
+            // an overlay cannot release a burst of banked ticks.
             _stepsLastFrame = 0;
             return;
         }
@@ -113,19 +123,37 @@ public class GameScene : IScene
     }
 
     /// <summary>
-    /// Right-click toggles the shop anywhere, per the agreed design. ESC closes
-    /// it rather than leaving to the menu, so the shop consumes the key while
-    /// it is open and quitting mid-shop takes two presses instead of one.
+    /// The two overlays own separate inputs so they can never fight over one
+    /// key: right-click is the only thing that opens or closes the shop, and
+    /// ESC is the only thing that opens or closes the pause menu.
+    ///
+    /// Returns true when this frame's input was spent here, so Update can stop.
+    /// IsKeyPressed stays true for a whole frame, so without that a single ESC
+    /// would be read by more than one handler.
     /// </summary>
-    private void HandleShopToggle()
+    private bool HandleOverlayInput()
     {
         if (Raylib.IsMouseButtonPressed(MouseButton.Right))
         {
             _shopOpen = !_shopOpen;
-            return;
+
+            // Never both at once.
+            if (_shopOpen) _paused = false;
+            return true;
         }
 
-        if (_shopOpen && Raylib.IsKeyPressed(KeyboardKey.Escape)) _shopOpen = false;
+        // The shop ignores ESC entirely - it closes with right-click only, so
+        // pressing ESC repeatedly can never walk out of the run.
+        if (_shopOpen) return false;
+
+        if (Raylib.IsKeyPressed(KeyboardKey.Escape))
+        {
+            _paused = !_paused;
+            if (_paused) _pauseUi.Reset();
+            return true;
+        }
+
+        return false;
     }
 
     private void HandleSceneInput()
@@ -134,8 +162,8 @@ public class GameScene : IScene
         if (Raylib.IsKeyPressed(KeyboardKey.J)) _world.Player.TakeDamage(25f);
         if (Raylib.IsKeyPressed(KeyboardKey.H)) _world.Player.Heal(25f);
 
-        if (Raylib.IsKeyPressed(KeyboardKey.Escape))
-            EventRaised?.Invoke(GameEvent.MainMenuRequested);
+        // Debug currency, so the shop can be exercised without farming kills.
+        if (Raylib.IsKeyPressed(KeyboardKey.G)) _world.AddCoins(DebugCoinGrant);
 
         if (Raylib.IsKeyPressed(KeyboardKey.F3))
             _renderer.ShowDebug = !_renderer.ShowDebug;
@@ -185,12 +213,33 @@ public class GameScene : IScene
     public void Draw()
     {
         Raylib.DrawText("WASD move   LMB fire   RMB shop   wheel side   E weapon   3-8 shape", 20, 20, 18, Color.DarkGray);
-        Raylib.DrawText("J damage   H heal   Z/X/C spawn enemy   ESC menu   F3 debug", 20, 42, 18, Color.DarkGray);
+        Raylib.DrawText($"J damage   H heal   G +{DebugCoinGrant} coins   Z/X/C spawn enemy   ESC pause   F3 debug",
+            20, 42, 18, Color.DarkGray);
 
         _renderer.Draw(_world, _stepsLastFrame);
         _hud.Draw(_world);
 
         if (_shopOpen) _shopUi.Draw(_world, _shop);
+        else if (_paused) HandlePauseMenu();
+    }
+
+    /// <summary>
+    /// Leaving the run is only reachable through the pause menu now, so it
+    /// takes a deliberate choice rather than a stray key press.
+    /// </summary>
+    private void HandlePauseMenu()
+    {
+        switch (_pauseUi.Draw())
+        {
+            case PauseAction.Resume:
+                _paused = false;
+                break;
+
+            case PauseAction.Quit:
+                _paused = false;
+                EventRaised?.Invoke(GameEvent.MainMenuRequested);
+                break;
+        }
     }
 
     public void Unload()

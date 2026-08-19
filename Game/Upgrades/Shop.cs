@@ -79,9 +79,20 @@ public sealed class Shop
                 break;
 
             case UpgradeKind.PlayerStat:
+            {
+                // Measure the change rather than assuming the modifier value,
+                // so this stays correct for Mult as well as Add.
+                float maxBefore = player.MaxHealth;
+
                 player.Stats.AddModifier(def.ToModifier());
                 player.Levels.Increment(def.Id);
+
+                // Raising max health grants that health too, so the bar fills
+                // rather than the fraction dropping the moment you pay for it.
+                float gained = player.MaxHealth - maxBefore;
+                if (gained > 0f) player.Heal(gained);
                 break;
+            }
 
             case UpgradeKind.Shape:
                 player.AddSide();
@@ -89,8 +100,8 @@ public sealed class Shop
                 break;
 
             case UpgradeKind.Repair:
-                // Never levels: repeatable at a flat cost, and Heal clamps to max.
-                player.Heal(def.ValuePerLevel);
+                // Never levels: repeatable at a flat cost, restores to full.
+                player.HealFull();
                 break;
         }
     }

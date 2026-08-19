@@ -30,8 +30,8 @@
       }
     },
     {
-      "id": "pistol",
-      "name": "Pistol",
+      "id": "grenade",
+      "name": "Grenade",
       "onHit": "Explode",
       "tint": "E8541F",
       "stats": {

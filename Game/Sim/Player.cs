@@ -86,12 +86,19 @@ public sealed class Player
         ? 0f
         : HitFlashTicks / (float)HitFlashDuration;
 
-    /// <summary>Never exceeds MaxHealth, so #31's Repair cannot overheal.</summary>
+    /// <summary>Never exceeds MaxHealth, so healing cannot overheal.</summary>
     public void Heal(float amount)
     {
         if (amount <= 0f || IsDead) return;
 
         Health = MathF.Min(MaxHealth, Health + amount);
+    }
+
+    public void HealFull()
+    {
+        if (IsDead) return;
+
+        Health = MaxHealth;
     }
 
     public Mount ActiveMount => Mounts[ActiveSide];
