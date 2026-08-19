@@ -46,7 +46,22 @@ public static class Tuning
 
     public static void Apply(PlayerConfig player, EffectsConfig effects)
     {
-        if (player != null) Player = player;
+        if (player != null)
+        {
+            // A polygon needs at least three sides, and Mounts is allocated to
+            // the ceiling - so an edit outside that range would index out of
+            // range in the render loop rather than merely looking wrong.
+            //
+            // global:: because this class has a Player property of its own,
+            // which would otherwise shadow the entity type.
+            player.MaxSides = Math.Clamp(player.MaxSides, 3, global::Player.MaxSidesCeiling);
+
+            if (player.Radius <= 0f) player.Radius = 1f;
+            if (player.MaxHealth <= 0f) player.MaxHealth = 1f;
+
+            Player = player;
+        }
+
         if (effects != null) Effects = effects;
     }
 }

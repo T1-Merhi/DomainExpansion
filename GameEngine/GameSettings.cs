@@ -21,17 +21,49 @@
     public float SfxVolume { get; set; } = 1.0f;
     public float MusicVolume { get; set; } = 0.5f;
 
+    /// <summary>
+    /// Never throws. This runs before the window exists, so an unhandled
+    /// exception here means the game fails to start with no visible reason and
+    /// no obvious recovery beyond finding and deleting the file.
+    /// </summary>
     public static GameSettings Load()
     {
-        if (!File.Exists(SettingsFile))
+        try
         {
-            var defaultSettings = new GameSettings();
-            defaultSettings.Save();
-            return defaultSettings;
+            if (File.Exists(SettingsFile))
+            {
+                string json = File.ReadAllText(SettingsFile);
+
+                var loaded = JsonSerializer.Deserialize<GameSettings>(json);
+                if (loaded != null) return loaded.Validated();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Settings: could not load ({ex.Message}); restoring defaults");
         }
 
-        var json = File.ReadAllText(SettingsFile);
-        return JsonSerializer.Deserialize<GameSettings>(json) ?? new GameSettings();
+        // Rewrite with defaults, so a corrupt file does not fail again next launch.
+        var defaults = new GameSettings();
+        defaults.Save();
+        return defaults;
+    }
+
+    /// <summary>
+    /// Repairs values that would break the window or audio device. A hand-edited
+    /// zero resolution is otherwise fatal at InitWindow.
+    /// </summary>
+    private GameSettings Validated()
+    {
+        if (Width < 320) Width = 1280;
+        if (Height < 240) Height = 720;
+        if (TargetFPS < 10) TargetFPS = 60;
+
+        MasterVolume = Math.Clamp(MasterVolume, 0f, 1f);
+        SfxVolume = Math.Clamp(SfxVolume, 0f, 1f);
+        MusicVolume = Math.Clamp(MusicVolume, 0f, 1f);
+
+        return this;
     }
 
     public void Save()

@@ -183,7 +183,9 @@ public class GameScene : IScene
         // leaderboard meaningless.
         if (!AppMode.IsAdmin) return;
 
-        if (Raylib.IsKeyPressed(KeyboardKey.J)) _world.Player.TakeDamage(25f);
+        // Through the guarded path, so god mode protects against the debug key
+        // too - one exception is how the rule drifts.
+        if (Raylib.IsKeyPressed(KeyboardKey.J)) _world.DamagePlayer(25f);
         if (Raylib.IsKeyPressed(KeyboardKey.H)) _world.Player.Heal(25f);
         if (Raylib.IsKeyPressed(KeyboardKey.G)) _world.AddCoins(DebugCoinGrant);
 

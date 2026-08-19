@@ -72,7 +72,7 @@ public sealed class ChaserBehavior : IEnemyBehavior
         {
             // Linear falloff, so backing off at the last moment reduces the hit.
             float falloff = 1f - MathF.Max(0f, distance) / radius;
-            player.TakeDamage(damage * falloff);
+            world.DamagePlayer(damage * falloff);
         }
 
         world.AddExplosion(enemy.Position, radius);

@@ -237,7 +237,9 @@ public sealed class WorldRenderer
 
     private void DrawPlayer(Player player)
     {
-        Span<Vector2> verts = stackalloc Vector2[Player.MaxSides];
+        // Ceiling, not MaxSides: MaxSides is a runtime config value and
+        // sizing the buffer from it makes a bad edit an out-of-range write.
+        Span<Vector2> verts = stackalloc Vector2[Player.MaxSidesCeiling];
         player.GetVertices(verts);
 
         int n = player.SideCount;
