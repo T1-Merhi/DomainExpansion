@@ -37,7 +37,17 @@ public sealed class World
         TickCount++;
 
         Player.Move(Input.MoveAxis, ArenaSize);
+
+        // Wheel is an edge, not a state: consume it so a frame that runs
+        // several ticks does not apply the same scroll more than once.
+        if (Input.WheelDelta != 0)
+        {
+            Player.CycleActiveSide(Input.WheelDelta);
+            Input.WheelDelta = 0;
+        }
+
         Player.AimAt(Input.MousePosition);
+        Player.StepRotation();
 
         TickWeapons();
         StepBullets();

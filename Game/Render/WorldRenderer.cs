@@ -50,6 +50,16 @@ public sealed class WorldRenderer
         Raylib.DrawLineEx(muzzle, muzzle + player.SideNormal(player.ActiveSide) * 14f,
             PrimaryThickness, Color.Orange);
 
+        // Side index just inside each edge, so the carousel is readable.
+        for (int i = 0; i < n; i++)
+        {
+            Vector2 label = player.Position + (player.SideMidpoint(i) - player.Position) * 0.55f;
+            string text = i.ToString();
+            int w = Raylib.MeasureText(text, 14);
+            Raylib.DrawText(text, (int)label.X - w / 2, (int)label.Y - 7, 14,
+                i == player.ActiveSide ? Color.Orange : Color.Gray);
+        }
+
         Raylib.DrawCircleV(player.Position, 3f, Color.DarkBlue);
     }
 
