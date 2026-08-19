@@ -336,7 +336,30 @@ public sealed class ShopRenderer
             new Rectangle(panel.X + 24, y, width - 10, 42),
             ShapeLabel(world.Player));
 
-        // Max health and repair join this row in #31.
+        DrawFooterButton(world, shop, world.UpgradeDefs.Find("maxhealth"),
+            new Rectangle(panel.X + 24 + width, y, width - 10, 42),
+            MaxHealthLabel(world.Player));
+
+        DrawFooterButton(world, shop, world.UpgradeDefs.Find("repair"),
+            new Rectangle(panel.X + 24 + width * 2, y, width - 10, 42),
+            RepairLabel(world.Player, world.UpgradeDefs.Find("repair")));
+    }
+
+    private static string MaxHealthLabel(Player player) =>
+        $"Max Health ({player.MaxHealth:0})";
+
+    /// <summary>
+    /// Names the amount restored, and says plainly when it is unavailable -
+    /// a greyed button with no reason reads as broken rather than disabled.
+    /// </summary>
+    private static string RepairLabel(Player player, UpgradeDef def)
+    {
+        if (player.Health >= player.MaxHealth) return "Repair (at full)";
+
+        float missing = player.MaxHealth - player.Health;
+        float restored = def == null ? 0f : MathF.Min(def.ValuePerLevel, missing);
+
+        return $"Repair (+{restored:0})";
     }
 
     /// <summary>Names the shape being bought, so the cost has something concrete attached.</summary>
