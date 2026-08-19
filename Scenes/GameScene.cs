@@ -109,6 +109,11 @@ public class GameScene : IScene
         // Debug weapon swap on the active mount until #30 makes it a purchase.
         if (Raylib.IsKeyPressed(KeyboardKey.E)) CycleActiveWeapon();
 
+        // Debug enemy spawning until #32 drives it from waves.
+        if (Raylib.IsKeyPressed(KeyboardKey.Z)) _world.SpawnEnemy(EnemyType.Chaser, _world.RandomEdgePosition());
+        if (Raylib.IsKeyPressed(KeyboardKey.X)) _world.SpawnEnemy(EnemyType.Shooter, _world.RandomEdgePosition());
+        if (Raylib.IsKeyPressed(KeyboardKey.C)) _world.SpawnEnemy(EnemyType.Spawner, _world.RandomEdgePosition());
+
         // Debug shape switching until #29 makes it a purchase.
         for (int sides = 3; sides <= 8; sides++)
         {
@@ -146,7 +151,7 @@ public class GameScene : IScene
     public void Draw()
     {
         Raylib.DrawText("WASD move   LMB fire   wheel side   E weapon   3-8 shape", 20, 20, 18, Color.DarkGray);
-        Raylib.DrawText("J damage   H heal   ESC menu   F3 debug", 20, 42, 18, Color.DarkGray);
+        Raylib.DrawText("J damage   H heal   Z/X/C spawn enemy   ESC menu   F3 debug", 20, 42, 18, Color.DarkGray);
 
         _renderer.Draw(_world, _stepsLastFrame);
         _hud.Draw(_world);
