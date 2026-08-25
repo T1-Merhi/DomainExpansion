@@ -113,7 +113,7 @@ public sealed class HudRenderer
             if (fraction > 0f)
             {
                 Raylib.DrawRectangleRec(new Rectangle(px, py, 28 * fraction, 8),
-                    new Color(90, 180, 235, 255));
+                    new Color(240, 140, 40, 255));
             }
 
             px += 32;
