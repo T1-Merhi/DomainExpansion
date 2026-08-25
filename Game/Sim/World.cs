@@ -156,8 +156,8 @@ public sealed class World
         AddShake(Tuning.Effects.ShakeOnPlayerHit);
     }
 
-    /// <summary>Pale blue, so a shield absorb reads differently from a blast.</summary>
-    private const uint ShieldHitTint = 0x7FC8FFFFu;
+    /// <summary>Bright orange spark where a hit lands on an arc.</summary>
+    private const uint ShieldHitTint = 0xFFA83CFFu;
 
     /// <summary>
     /// Damage arriving from a direction. Absorbed by the arc covering that
@@ -200,12 +200,25 @@ public sealed class World
             float distance = delta.Length();
             if (distance < 0.001f) continue;
 
-            float minimum = barrier - e.Radius;
+            // The enemy's near edge must sit on the barrier, so its centre has
+            // to be a full radius beyond it. Subtracting instead let the centre
+            // come inside the ring, which is why enemies passed through.
+            float minimum = barrier + e.Radius;
             if (distance >= minimum) continue;
 
-            if (Shield.ArcCovering(Player.Position, e.Position) < 0) continue;
+            Vector2 direction = delta / distance;
 
-            e.Position = Player.Position + delta / distance * minimum;
+            // Judged from where it is being pushed to, not from where it is:
+            // an enemy already inside can be on the far side of an arc boundary
+            // from the surface it is actually pressing against.
+            if (Shield.ArcCovering(Player.Position, Player.Position + direction * minimum) < 0) continue;
+
+            e.Position = Player.Position + direction * minimum;
+
+            // Cancel inward velocity so it stops driving into the arc and
+            // slides along it toward a gap instead of juddering in place.
+            float inward = Vector2.Dot(e.Velocity, direction);
+            if (inward < 0f) e.Velocity -= direction * inward;
         }
     }
 
@@ -395,12 +408,15 @@ public sealed class World
         Player.TickDash(ArenaSize);
 
         Shield.Tick();
-        PushEnemiesOffShield();
 
         TickWeapons();
         StepBullets();
         StepEnemyBullets();
         TickEnemies();
+
+        // After the enemies move, not before. Pushing first let them walk
+        // straight back through on the same tick.
+        PushEnemiesOffShield();
 
         _grid.Rebuild(Enemies);
         ResolveBulletHits();

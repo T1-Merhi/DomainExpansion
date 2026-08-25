@@ -96,8 +96,33 @@ public sealed class WorldRenderer
             Color color = FromPacked(e.Tint);
             color.A = (byte)(200 * (1f - t));
 
-            Raylib.DrawCircleV(e.Position, radius, color);
+            Raylib.DrawCircleV(e.Position, ClipToShield(world, e.Position, radius), color);
         }
+    }
+
+    /// <summary>
+    /// Stops a blast at the shield surface when an intact arc faces it.
+    ///
+    /// The damage was already blocked, but a disc drawn straight over the
+    /// player reads as a hit that landed - which is worse than no effect at
+    /// all, because it says the shield failed when it did its job.
+    /// </summary>
+    private static float ClipToShield(World world, Vector2 origin, float radius)
+    {
+        Shield shield = world.Shield;
+        if (!shield.Enabled) return radius;
+
+        Vector2 player = world.Player.Position;
+        float distance = Vector2.Distance(origin, player);
+
+        // Already inside the ring, so there is nothing between it and the player.
+        if (distance <= shield.Radius) return radius;
+
+        // Through a gap or a broken arc: nothing stops it, so nothing clips it.
+        if (shield.ArcCovering(player, origin) < 0) return radius;
+
+        float toSurface = distance - shield.Radius;
+        return MathF.Max(2f, MathF.Min(radius, toSurface));
     }
 
     /// <summary>
@@ -216,20 +241,21 @@ public sealed class WorldRenderer
             if (!shield.IsIntact(i))
             {
                 Raylib.DrawRing(centre, inner, outer, start, end, 24,
-                    new Color(120, 140, 160, 45));
+                    new Color(170, 120, 60, 45));
                 continue;
             }
 
-            // Colour tracks remaining strength, so a nearly-broken arc reads as
-            // one before it fails.
+            // Orange, deepening toward red as the arc weakens - so a
+            // nearly-broken arc reads as one before it fails.
             float fraction = Math.Clamp(shield.HealthOf(i) / MathF.Max(1f, shield.MaxArcHealth), 0f, 1f);
 
-            int alpha = shield.FlashOf(i) > 0 ? 255 : 190;
+            bool flashing = shield.FlashOf(i) > 0;
+
             var color = new Color(
-                (int)(90 + (1f - fraction) * 150f),
-                (int)(170 + fraction * 40f),
                 255,
-                alpha);
+                flashing ? 220 : (int)(90 + fraction * 90f),
+                flashing ? 150 : (int)(20 + fraction * 40f),
+                flashing ? 255 : 205);
 
             Raylib.DrawRing(centre, inner, outer, start, end, 24, color);
         }
