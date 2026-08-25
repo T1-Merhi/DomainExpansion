@@ -11,6 +11,7 @@ public sealed class World
     public long TickCount { get; private set; }
 
     public readonly Player Player = new();
+    public readonly Shield Shield = new();
 
     /// <summary>Play area in world units. Currently matches the window.</summary>
     public Vector2 ArenaSize { get; private set; }
@@ -147,10 +148,65 @@ public sealed class World
     /// </summary>
     public void DamagePlayer(float amount)
     {
-        if (amount <= 0f || GodMode || Player.IsDead) return;
+        // Dash invulnerability and god mode share this door, so a new damage
+        // source cannot opt out of either.
+        if (amount <= 0f || GodMode || Player.IsDead || Player.IsDashing) return;
 
         Player.TakeDamage(amount);
         AddShake(Tuning.Effects.ShakeOnPlayerHit);
+    }
+
+    /// <summary>Pale blue, so a shield absorb reads differently from a blast.</summary>
+    private const uint ShieldHitTint = 0x7FC8FFFFu;
+
+    /// <summary>
+    /// Damage arriving from a direction. Absorbed by the arc covering that
+    /// direction when one is intact, so explosions and detonations are stopped
+    /// by the shield exactly as bullets are.
+    /// </summary>
+    public void DamagePlayerFrom(Vector2 source, float amount)
+    {
+        if (amount <= 0f) return;
+
+        int arc = Shield.ArcCovering(Player.Position, source);
+
+        if (arc >= 0)
+        {
+            Shield.DamageArc(arc, amount);
+            AddExplosion(Player.Position + Vector2.Normalize(source - Player.Position) * Shield.Radius,
+                18f, ShieldHitTint);
+            return;
+        }
+
+        DamagePlayer(amount);
+    }
+
+    /// <summary>
+    /// Keeps enemies outside an intact arc. Pushed along the surface normal
+    /// rather than stopped dead, so a crowd cannot pin an arc and stall against
+    /// it - they slide around toward a gap instead.
+    /// </summary>
+    private void PushEnemiesOffShield()
+    {
+        if (!Shield.Enabled || !Shield.AnyIntact) return;
+
+        float barrier = Shield.Radius - Shield.Thickness * 0.5f;
+
+        for (int i = 0; i < Enemies.ActiveCount; i++)
+        {
+            Enemy e = Enemies[i];
+
+            Vector2 delta = e.Position - Player.Position;
+            float distance = delta.Length();
+            if (distance < 0.001f) continue;
+
+            float minimum = barrier - e.Radius;
+            if (distance >= minimum) continue;
+
+            if (Shield.ArcCovering(Player.Position, e.Position) < 0) continue;
+
+            e.Position = Player.Position + delta / distance * minimum;
+        }
     }
 
     /// <summary>
@@ -328,6 +384,19 @@ public sealed class World
         Player.TickHitFlash();
         Player.TickMuzzleFlash();
 
+        // Consumed like the wheel: a press is an edge, and a frame running
+        // several ticks must not spend it more than once.
+        if (Input.DashPressed)
+        {
+            Player.TryDash(Input.MoveAxis, Input.MousePosition);
+            Input.DashPressed = false;
+        }
+
+        Player.TickDash(ArenaSize);
+
+        Shield.Tick();
+        PushEnemiesOffShield();
+
         TickWeapons();
         StepBullets();
         StepEnemyBullets();
@@ -456,6 +525,20 @@ public sealed class World
         {
             Bullet b = EnemyBullets[i];
 
+            // An intact arc eats the round before it reaches the player.
+            if (Shield.Enabled && Shield.WithinBand(Player.Position, b.Position, b.Radius))
+            {
+                int arc = Shield.ArcCovering(Player.Position, b.Position);
+
+                if (arc >= 0)
+                {
+                    Shield.DamageArc(arc, b.Damage);
+                    AddExplosion(b.Position, 14f, ShieldHitTint);
+                    EnemyBullets.ReturnAt(i);
+                    continue;
+                }
+            }
+
             if (!Collision.CirclesOverlap(b.Position, b.Radius, Player.Position, Player.Radius)) continue;
 
             DamagePlayer(b.Damage);
@@ -483,7 +566,7 @@ public sealed class World
 
             if (!Collision.CirclesOverlap(Player.Position, Player.Radius, e.Position, e.Radius)) continue;
 
-            DamagePlayer(contact * FixedStep);
+            DamagePlayerFrom(e.Position, contact * FixedStep);
         }
     }
 

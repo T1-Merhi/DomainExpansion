@@ -51,6 +51,8 @@ public sealed class Shop
             UpgradeKind.Repair => _world.Player.Health < _world.Player.MaxHealth,
             UpgradeKind.EquipWeapon => true,
             UpgradeKind.PlayerStat => true,
+            UpgradeKind.ShieldHealth => true,
+            UpgradeKind.ShieldRadius => true,
             _ => false,
         };
     }
@@ -110,6 +112,16 @@ public sealed class Shop
 
             case UpgradeKind.Shape:
                 player.AddSide();
+                player.Levels.Increment(def.Id);
+                break;
+
+            case UpgradeKind.ShieldHealth:
+                _world.Shield.AddMaxHealth(def.ValuePerLevel);
+                player.Levels.Increment(def.Id);
+                break;
+
+            case UpgradeKind.ShieldRadius:
+                _world.Shield.AddRadius(def.ValuePerLevel);
                 player.Levels.Increment(def.Id);
                 break;
 

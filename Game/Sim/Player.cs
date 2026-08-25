@@ -87,6 +87,69 @@ public sealed class Player
         if (MuzzleFlashTicks > 0) MuzzleFlashTicks--;
     }
 
+    // --- Dash -----------------------------------------------------------
+
+    private Vector2 _dashDirection;
+    private int _dashTicksLeft;
+    private int _dashCooldownTicks;
+
+    /// <summary>Invulnerable for the duration, which is the point of the dash.</summary>
+    public bool IsDashing => _dashTicksLeft > 0;
+
+    public bool DashReady => _dashCooldownTicks <= 0 && !IsDashing;
+
+    /// <summary>0 when ready, 1 immediately after dashing.</summary>
+    public float DashCooldownFraction
+    {
+        get
+        {
+            int total = DashCooldownTicks;
+            return total <= 0 ? 0f : Math.Clamp(_dashCooldownTicks / (float)total, 0f, 1f);
+        }
+    }
+
+    private static int DashCooldownTicks =>
+        Math.Max(1, (int)MathF.Round(Tuning.Player.DashCooldownSeconds * World.TickRate));
+
+    /// <summary>
+    /// Dashes along the movement axis, or toward the cursor when standing
+    /// still - a dash that does nothing because no key is held is just a
+    /// wasted cooldown.
+    /// </summary>
+    public bool TryDash(Vector2 moveAxis, Vector2 cursor)
+    {
+        if (!DashReady) return false;
+
+        Vector2 direction = moveAxis;
+
+        if (direction.LengthSquared() < 0.001f)
+        {
+            Vector2 toCursor = cursor - Position;
+            if (toCursor.LengthSquared() < 0.001f) return false;
+
+            direction = toCursor;
+        }
+
+        _dashDirection = Vector2.Normalize(direction);
+        _dashTicksLeft = Math.Max(1, (int)MathF.Round(Tuning.Player.DashSeconds * World.TickRate));
+        _dashCooldownTicks = DashCooldownTicks;
+        return true;
+    }
+
+    public void TickDash(Vector2 arenaSize)
+    {
+        if (_dashCooldownTicks > 0) _dashCooldownTicks--;
+        if (_dashTicksLeft <= 0) return;
+
+        _dashTicksLeft--;
+
+        Position += _dashDirection * Tuning.Player.DashSpeed * World.FixedStep;
+
+        Position = new Vector2(
+            Math.Clamp(Position.X, Radius, arenaSize.X - Radius),
+            Math.Clamp(Position.Y, Radius, arenaSize.Y - Radius));
+    }
+
     public void TickHitFlash()
     {
         if (HitFlashTicks > 0) HitFlashTicks--;

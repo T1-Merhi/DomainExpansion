@@ -88,6 +88,10 @@ public sealed class WaveRunner
     {
         WaveNumber++;
 
+        // Arcs come back each wave, so one bad wave is a setback rather than
+        // a permanent loss for the rest of the run.
+        _world.Shield.RepairAll();
+
         WaveComposition composition = _generator.For(WaveNumber);
         _remainingChaser = composition.Chaser;
         _remainingShooter = composition.Shooter;

@@ -27,6 +27,7 @@ public sealed class WorldRenderer
         DrawEnemies(world);
         DrawBullets(world);
         DrawPlayer(world.Player);
+        DrawShield(world);
         DrawFloatingTexts(world);
 
         Raylib.EndMode2D();
@@ -189,6 +190,50 @@ public sealed class WorldRenderer
     /// every frame.
     /// </summary>
     private static Color EnemyColor(World world, Enemy enemy) => FromPacked(enemy.Tint);
+
+    /// <summary>
+    /// The three arcs, drawn as thick ring segments with the gaps left open.
+    /// A broken arc is drawn as a faint outline rather than omitted entirely,
+    /// so the player can see where the hole is instead of inferring it.
+    /// </summary>
+    private static void DrawShield(World world)
+    {
+        Shield shield = world.Shield;
+        if (!shield.Enabled) return;
+
+        Vector2 centre = world.Player.Position;
+
+        float half = shield.HalfWidthRadians * 180f / MathF.PI;
+        float inner = shield.Radius - shield.Thickness * 0.5f;
+        float outer = shield.Radius + shield.Thickness * 0.5f;
+
+        for (int i = 0; i < Shield.ArcCount; i++)
+        {
+            float centreDeg = shield.CentreAngle(i) * 180f / MathF.PI;
+            float start = centreDeg - half;
+            float end = centreDeg + half;
+
+            if (!shield.IsIntact(i))
+            {
+                Raylib.DrawRing(centre, inner, outer, start, end, 24,
+                    new Color(120, 140, 160, 45));
+                continue;
+            }
+
+            // Colour tracks remaining strength, so a nearly-broken arc reads as
+            // one before it fails.
+            float fraction = Math.Clamp(shield.HealthOf(i) / MathF.Max(1f, shield.MaxArcHealth), 0f, 1f);
+
+            int alpha = shield.FlashOf(i) > 0 ? 255 : 190;
+            var color = new Color(
+                (int)(90 + (1f - fraction) * 150f),
+                (int)(170 + fraction * 40f),
+                255,
+                alpha);
+
+            Raylib.DrawRing(centre, inner, outer, start, end, 24, color);
+        }
+    }
 
     /// <summary>Unpacks the sim's opaque RGBA value into a drawable colour.</summary>
     private static Color FromPacked(uint tint) => new(

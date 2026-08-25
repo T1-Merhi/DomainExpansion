@@ -31,7 +31,9 @@
       "op": "Add",
       "valuePerLevel": 1,
       "maxLevel": 3,
-      "appliesTo": [ "shotgun" ],
+      "appliesTo": [
+        "shotgun"
+      ],
       "costBase": 180,
       "costGrowth": 1.7
     },
@@ -43,7 +45,9 @@
       "op": "Add",
       "valuePerLevel": 15,
       "maxLevel": 5,
-      "appliesTo": [ "grenade" ],
+      "appliesTo": [
+        "grenade"
+      ],
       "costBase": 130,
       "costGrowth": 1.5
     },
@@ -94,6 +98,24 @@
       "kind": "EquipWeapon",
       "costBase": 150,
       "costGrowth": 1.0
+    },
+    {
+      "id": "shieldhealth",
+      "name": "Shield Strength",
+      "kind": "ShieldHealth",
+      "valuePerLevel": 15,
+      "maxLevel": 10,
+      "costBase": 140,
+      "costGrowth": 1.45
+    },
+    {
+      "id": "shieldsize",
+      "name": "Shield Size",
+      "kind": "ShieldRadius",
+      "valuePerLevel": 9,
+      "maxLevel": 8,
+      "costBase": 170,
+      "costGrowth": 1.5
     }
   ]
 }
