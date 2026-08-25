@@ -14,6 +14,12 @@ public enum UpgradeKind
 
     /// <summary>Fits a weapon to a mount. Repeatable, never levels.</summary>
     EquipWeapon,
+
+    /// <summary>Raises per-arc shield health.</summary>
+    ShieldHealth,
+
+    /// <summary>Widens the shield orbit.</summary>
+    ShieldRadius,
 }
 
 /// <summary>

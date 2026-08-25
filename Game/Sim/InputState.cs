@@ -9,4 +9,5 @@ public struct InputState
     public Vector2 MoveAxis;      // normalised, -1..1 per axis
     public bool FireHeld;
     public int WheelDelta;
+    public bool DashPressed;
 }

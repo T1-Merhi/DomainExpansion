@@ -7,5 +7,14 @@
   "muzzleFlashTicks": 4,
   "maxSides": 12,
   "bulletRadius": 4,
-  "enemyBulletRadius": 5
+  "enemyBulletRadius": 5,
+  "dashSpeed": 900,
+  "dashSeconds": 0.16,
+  "dashCooldownSeconds": 1.6,
+  "shieldEnabled": true,
+  "shieldRadius": 58,
+  "shieldArcHealth": 40,
+  "shieldRotationSpeed": 55,
+  "shieldArcDegrees": 84,
+  "shieldThickness": 7
 }

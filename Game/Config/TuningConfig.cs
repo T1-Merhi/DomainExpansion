@@ -10,6 +10,19 @@ public sealed class PlayerConfig
     public int MaxSides { get; set; } = 12;
     public float BulletRadius { get; set; } = 4f;
     public float EnemyBulletRadius { get; set; } = 5f;
+
+    // Dash
+    public float DashSpeed { get; set; } = 900f;
+    public float DashSeconds { get; set; } = 0.16f;
+    public float DashCooldownSeconds { get; set; } = 1.6f;
+
+    // Shield
+    public bool ShieldEnabled { get; set; } = true;
+    public float ShieldRadius { get; set; } = 58f;
+    public float ShieldArcHealth { get; set; } = 40f;
+    public float ShieldRotationSpeed { get; set; } = 55f;   // degrees per second
+    public float ShieldArcDegrees { get; set; } = 84f;      // covered per arc
+    public float ShieldThickness { get; set; } = 7f;
 }
 
 /// <summary>Feedback timings and behaviour tuning that affect feel rather than rules.</summary>

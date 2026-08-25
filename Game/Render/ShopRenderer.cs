@@ -27,6 +27,17 @@ public sealed class ShopRenderer
 
     private static readonly string[] PlacedPlayerUpgrades = ["maxhealth"];
 
+    /// <summary>
+    /// Run-wide upgrades that get an automatic footer slot. Anything of these
+    /// kinds not explicitly placed appears without code changes, so a new one
+    /// in JSON cannot end up defined but unreachable.
+    /// </summary>
+    private static bool IsExtraRunUpgrade(UpgradeDef def) =>
+        (def.Kind == UpgradeKind.PlayerStat ||
+         def.Kind == UpgradeKind.ShieldHealth ||
+         def.Kind == UpgradeKind.ShieldRadius) &&
+        Array.IndexOf(PlacedPlayerUpgrades, def.Id) < 0;
+
     /// <summary>Which side's detail is shown. Owned here; the sim is untouched.</summary>
     public int SelectedSide;
 
@@ -173,8 +184,7 @@ public sealed class ShopRenderer
         int slot = 0;
         foreach (UpgradeDef def in world.UpgradeDefs.Upgrades)
         {
-            if (def.Kind != UpgradeKind.PlayerStat) continue;
-            if (Array.IndexOf(PlacedPlayerUpgrades, def.Id) >= 0) continue;
+            if (!IsExtraRunUpgrade(def)) continue;
 
             TryFooterClick(shop, def, FooterRect(panel, slot, 1));
             if (++slot >= 3) return;
@@ -450,8 +460,7 @@ public sealed class ShopRenderer
         int slot = 0;
         foreach (UpgradeDef def in world.UpgradeDefs.Upgrades)
         {
-            if (def.Kind != UpgradeKind.PlayerStat) continue;
-            if (Array.IndexOf(PlacedPlayerUpgrades, def.Id) >= 0) continue;
+            if (!IsExtraRunUpgrade(def)) continue;
 
             DrawFooterButton(world, shop, def, FooterRect(panel, slot, 1),
                 $"{def.Name} (Lv {shop.LevelOf(def, SelectedSide)})");
@@ -507,7 +516,7 @@ public sealed class ShopRenderer
 
     private static void DrawFooterHint(Rectangle panel)
     {
-        const string hint = "Right-click to close   -   the arena keeps moving";
+        const string hint = "Right-click to close";
         int w = Raylib.MeasureText(hint, 15);
         Raylib.DrawText(hint, (int)(panel.X + panel.Width / 2) - w / 2,
             (int)(panel.Y + panel.Height) - 28, 15, Muted);

@@ -15,6 +15,7 @@ public sealed class HudRenderer
         DrawActiveWeapon(world.Player);
         DrawCurrency(world);
         DrawWaveStatus(world);
+        DrawDashAndShield(world);
         DrawConfigStamp();
     }
 
@@ -74,6 +75,51 @@ public sealed class HudRenderer
             int sw = Raylib.MeasureText(status, 17);
             Raylib.DrawText(status, centreX - sw / 2, Margin + 32, 17, new Color(150, 150, 160, 255));
         }
+    }
+
+    /// <summary>
+    /// Dash readiness and shield strength, above the health bar. Both are
+    /// resources spent under pressure, so they sit together where the player is
+    /// already looking for their health.
+    /// </summary>
+    private void DrawDashAndShield(World world)
+    {
+        int y = Raylib.GetScreenHeight() - Margin - BarHeight - 54;
+
+        // Fills as the cooldown drains, so "ready" is a full bar.
+        float ready = 1f - world.Player.DashCooldownFraction;
+
+        Raylib.DrawRectangleRec(new Rectangle(Margin, y, 90, 8), new Color(210, 210, 216, 255));
+        Raylib.DrawRectangleRec(new Rectangle(Margin, y, 90 * ready, 8),
+            world.Player.DashReady ? new Color(90, 180, 220, 255) : new Color(150, 160, 170, 255));
+
+        Raylib.DrawText("DASH", Margin + 98, y - 4, 14,
+            world.Player.DashReady ? new Color(60, 60, 70, 255) : new Color(150, 150, 160, 255));
+
+        if (!world.Shield.Enabled) return;
+
+        // One pip per arc, so a broken arc registers without looking away from
+        // the fight to inspect the ring itself.
+        int px = Margin;
+        int py = y - 18;
+
+        for (int i = 0; i < Shield.ArcCount; i++)
+        {
+            float fraction = Math.Clamp(
+                world.Shield.HealthOf(i) / MathF.Max(1f, world.Shield.MaxArcHealth), 0f, 1f);
+
+            Raylib.DrawRectangleRec(new Rectangle(px, py, 28, 8), new Color(210, 210, 216, 255));
+
+            if (fraction > 0f)
+            {
+                Raylib.DrawRectangleRec(new Rectangle(px, py, 28 * fraction, 8),
+                    new Color(90, 180, 235, 255));
+            }
+
+            px += 32;
+        }
+
+        Raylib.DrawText("SHIELD", Margin + 98, py - 4, 14, new Color(150, 150, 160, 255));
     }
 
     /// <summary>

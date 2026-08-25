@@ -65,22 +65,22 @@ public class GameScene : IScene
     {
         bool overlayConsumedInput = HandleOverlayInput();
 
-        // The pause menu freezes; the shop does not. Freezing for the shop
-        // made it an unlimited-use invulnerability button, since it opens
-        // anywhere - so the arena keeps moving behind it and the rest phase is
-        // once again the safe time to spend.
-        if (_paused || overlayConsumedInput)
+        // Both overlays freeze the simulation. The accumulator is deliberately
+        // not advanced, so closing one cannot release a burst of banked ticks.
+        if (_shopOpen || _paused || overlayConsumedInput)
         {
             // Overlay interaction happens here, not in Draw. Acting during the
             // draw pass meant a scene transition could be raised while the
             // frame was still being rendered.
-            if (_paused && !overlayConsumedInput) HandlePauseMenu();
+            if (!overlayConsumedInput)
+            {
+                if (_shopOpen) _shopUi.HandleInput(_world, _shop);
+                else if (_paused) HandlePauseMenu();
+            }
 
             _stepsLastFrame = 0;
             return;
         }
-
-        if (_shopOpen) _shopUi.HandleInput(_world, _shop);
 
         HandleSceneInput();
 
@@ -136,6 +136,8 @@ public class GameScene : IScene
             MousePosition = Raylib.GetMousePosition(),
             MoveAxis = axis,
             FireHeld = Raylib.IsMouseButtonDown(MouseButton.Left),
+            DashPressed = Raylib.IsKeyPressed(KeyboardKey.LeftShift) ||
+                          Raylib.IsKeyPressed(KeyboardKey.RightShift),
         };
     }
 
@@ -238,7 +240,7 @@ public class GameScene : IScene
     {
         if (AppMode.IsAdmin)
         {
-            Raylib.DrawText("WASD move   LMB fire   RMB shop   wheel side   E weapon   3-8 shape", 20, 20, 18, Color.DarkGray);
+            Raylib.DrawText("WASD move   SHIFT dash   LMB fire   RMB shop   wheel side   E weapon", 20, 20, 18, Color.DarkGray);
             Raylib.DrawText("J damage   H heal   G coins   Z/X/C spawn   ENTER skip rest   ESC pause   F3 debug",
                 20, 42, 18, Color.DarkGray);
         }
